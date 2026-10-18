@@ -74,7 +74,8 @@ func (h *Handler) SetupRoutes(router *gin.Engine, apiMiddleware gin.HandlerFunc)
 	openaiGroup.POST("/chat/completions", h.HandleRequest)
 	openaiGroup.POST("/completions", h.HandleRequest)
 	openaiGroup.POST("/embeddings", h.HandleRequest)
-	openaiGroup.GET("/models", h.HandleRequest)
+	// 注意: GET /v1/models 不在openai包中注册，由server包统一分派
+	// （OpenAI与Anthropic的模型列表格式不同，需要根据请求头判断协议）
 
 	// 以下是更多可能需要的OpenAI API路径
 	openaiGroup.GET("/models/:model", h.HandleRequest)
@@ -95,14 +96,10 @@ func (h *Handler) HandleRequest(c *gin.Context) {
 	method := c.Request.Method
 	path := c.Request.URL.Path
 
-	fmt.Printf("DEBUG: 原始路径: %s\n", path)
-
-	// 处理路径，移除前缀"/v1"
+	// 处理路径，移除前缀"/v1"（服务层已兼容带/不带/v1前缀）
 	if strings.HasPrefix(path, "/v1") {
 		path = path[3:]
 	}
-
-	fmt.Printf("DEBUG: 处理后路径: %s\n", path)
 
 	// 读取请求体
 	var bodyBytes []byte
@@ -140,7 +137,6 @@ func (h *Handler) HandleRequest(c *gin.Context) {
 	}
 
 	// 使用OpenAI服务处理请求
-	startTime := time.Now()
 	statusCode, responseHeaders, responseData, err := h.openaiService.HandleRequest(
 		method, path, headers, queryParams, bodyBytes,
 	)
@@ -164,39 +160,8 @@ func (h *Handler) HandleRequest(c *gin.Context) {
 		responseBody = responseData
 	}
 
-	// 构建响应对象
-	response := &storage.ProxyResponse{
-		StatusCode: statusCode,
-		Headers:    responseHeaders,
-		Body:       responseBody,
-		Latency:    time.Since(startTime).Milliseconds(),
-	}
-
-	// 获取用户信息（为了向后兼容）
-	userID, username := h.getUserFromContext(c)
-
-	// 保存请求和响应
-	request := &storage.Request{
-		ID:        uuid.New().String(),
-		UserID:    userID,
-		Method:    method,
-		Path:      path,
-		Timestamp: time.Now(),
-		Headers:   headers,
-		Query:     queryParams,
-		Body:      bodyBytes,
-		ClientIP:  utils.GetClientIP(c.Request),
-		Response:  response,
-		Metadata: map[string]interface{}{
-			"source":     "openai_handler",
-			"user_id":    userID,
-			"username":   username,
-			"latency_ms": time.Since(startTime).Milliseconds(),
-		},
-	}
-
-	// 保存请求
-	h.SaveRequest(userID, request)
+	// 注意：请求/响应记录由 apiMiddleware 统一保存（SetupRoutes 中已应用该中间件），
+	// 这里不再重复保存，避免每条请求产生两条记录
 
 	// 设置响应头
 	for key, value := range responseHeaders {

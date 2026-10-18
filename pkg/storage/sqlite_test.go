@@ -17,13 +17,13 @@ func createTestRequest(id string) *Request {
 		Method:    "POST",
 		Path:      "/api/test/" + id,
 		Timestamp: time.Now(),
-		Headers: map[string][]string{
-			"Content-Type": {"application/json"},
-			"User-Agent":   {"Test-Agent"},
+		Headers: map[string]string{
+			"Content-Type": "application/json",
+			"User-Agent":   "Test-Agent",
 		},
-		Query: map[string][]string{
-			"param1": {"value1"},
-			"param2": {"value2"},
+		Query: map[string]string{
+			"param1": "value1",
+			"param2": "value2",
 		},
 		Body:     map[string]interface{}{"test": "data"},
 		ClientIP: "127.0.0.1",
@@ -38,15 +38,32 @@ func createTestRequest(id string) *Request {
 	}
 }
 
+// createTestUser 创建一个测试用户并返回其ID（requests表有外键约束，必须先有用户）
+func createTestUser(t *testing.T, storage Storage) int64 {
+	user := &User{
+		Username: fmt.Sprintf("testuser-%d", time.Now().UnixNano()),
+		Password: "testpass",
+		UserType: "user",
+		IsActive: true,
+	}
+	err := storage.CreateUser(user)
+	require.NoError(t, err)
+	return user.ID
+}
+
 // testStorageReopen 测试存储重新打开的功能
 func testStorageReopen(t *testing.T, createStorageFn func() (Storage, error), cleanup func()) {
 	// 创建存储实例
 	storage, err := createStorageFn()
 	require.NoError(t, err)
 
+	// 创建测试用户
+	userID := createTestUser(t, storage)
+
 	// 添加测试数据
 	req := createTestRequest("reopen-test")
-	err = storage.SaveRequest(req)
+	req.UserID = userID
+	err = storage.SaveRequest(userID, req)
 	require.NoError(t, err)
 
 	// 关闭存储
@@ -59,13 +76,13 @@ func testStorageReopen(t *testing.T, createStorageFn func() (Storage, error), cl
 	defer storage.Close()
 
 	// 验证数据仍然存在
-	retrievedReq, err := storage.GetRequestByID("reopen-test")
+	retrievedReq, err := storage.GetRequestByID(userID, "reopen-test")
 	require.NoError(t, err)
 	assert.Equal(t, "reopen-test", retrievedReq.ID)
 	assert.Equal(t, "/api/test/reopen-test", retrievedReq.Path)
 
 	// 清理测试数据
-	err = storage.DeleteRequest("reopen-test")
+	err = storage.DeleteRequest(userID, "reopen-test")
 	assert.NoError(t, err)
 }
 
@@ -83,6 +100,9 @@ func TestSQLiteStorage(t *testing.T) {
 		t.Fatalf("创建SQLiteStorage失败: %v", err)
 	}
 	defer storage.Close()
+
+	// 创建测试用户（requests表有外键约束）
+	userID := createTestUser(t, storage)
 
 	// 测试保存请求
 	t.Run("SaveRequest", func(t *testing.T) {
@@ -105,14 +125,14 @@ func TestSQLiteStorage(t *testing.T) {
 			},
 		}
 
-		if err := storage.SaveRequest(req); err != nil {
+		if err := storage.SaveRequest(userID, req); err != nil {
 			t.Fatalf("保存请求失败: %v", err)
 		}
 	})
 
 	// 测试获取单个请求
 	t.Run("GetRequestByID", func(t *testing.T) {
-		req, err := storage.GetRequestByID("test-id-1")
+		req, err := storage.GetRequestByID(userID, "test-id-1")
 		if err != nil {
 			t.Fatalf("获取请求失败: %v", err)
 		}
@@ -128,7 +148,7 @@ func TestSQLiteStorage(t *testing.T) {
 
 	// 测试获取不存在的请求
 	t.Run("GetRequestByID_NotFound", func(t *testing.T) {
-		_, err := storage.GetRequestByID("non-existent-id")
+		_, err := storage.GetRequestByID(userID, "non-existent-id")
 		if err == nil {
 			t.Fatalf("应该返回错误，但返回了nil")
 		}
@@ -153,7 +173,7 @@ func TestSQLiteStorage(t *testing.T) {
 					Latency: 30 + int64(i),
 				},
 			}
-			if err := storage.SaveRequest(req); err != nil {
+			if err := storage.SaveRequest(userID, req); err != nil {
 				t.Fatalf("保存请求失败: %v", err)
 			}
 		}
@@ -204,12 +224,12 @@ func TestSQLiteStorage(t *testing.T) {
 
 	// 测试删除单个请求
 	t.Run("DeleteRequest", func(t *testing.T) {
-		if err := storage.DeleteRequest("test-id-1"); err != nil {
+		if err := storage.DeleteRequest(userID, "test-id-1"); err != nil {
 			t.Fatalf("删除请求失败: %v", err)
 		}
 
 		// 尝试再次获取已删除的请求
-		_, err := storage.GetRequestByID("test-id-1")
+		_, err := storage.GetRequestByID(userID, "test-id-1")
 		if err == nil {
 			t.Fatalf("应该返回错误，但返回了nil")
 		}
@@ -217,7 +237,7 @@ func TestSQLiteStorage(t *testing.T) {
 
 	// 测试删除不存在的请求
 	t.Run("DeleteRequest_NotFound", func(t *testing.T) {
-		err := storage.DeleteRequest("non-existent-id")
+		err := storage.DeleteRequest(userID, "non-existent-id")
 		if err == nil {
 			t.Fatalf("应该返回错误，但返回了nil")
 		}
@@ -256,9 +276,9 @@ func TestSQLiteStorage(t *testing.T) {
 			t.Fatalf("期望有9个请求，但统计结果为 %d", totalRequests)
 		}
 
-		methods, ok := stats["methods"].(map[string]int)
+		methods, ok := stats["method_counts"].(map[string]int)
 		if !ok {
-			t.Fatalf("统计信息中没有methods字段或类型错误")
+			t.Fatalf("统计信息中没有method_counts字段或类型错误")
 		}
 
 		// 验证方法统计
@@ -316,9 +336,13 @@ func TestSQLiteStorageEdgeCases(t *testing.T) {
 		}
 		defer storage.Close()
 
+		// 创建测试用户
+		userID := createTestUser(t, storage)
+
 		// 验证可以正常工作
 		req := createTestRequest("default-sqlite-location-test")
-		err = storage.SaveRequest(req)
+		req.UserID = userID
+		err = storage.SaveRequest(userID, req)
 		require.NoError(t, err)
 
 		// 获取存储统计信息，确认工作正常
@@ -327,7 +351,7 @@ func TestSQLiteStorageEdgeCases(t *testing.T) {
 		require.NotNil(t, stats)
 
 		// 清理
-		err = storage.DeleteRequest("default-sqlite-location-test")
+		err = storage.DeleteRequest(userID, "default-sqlite-location-test")
 		assert.NoError(t, err)
 	})
 
@@ -356,13 +380,17 @@ func TestSQLiteStorageEdgeCases(t *testing.T) {
 		err = storage.DeleteAllRequests()
 		require.NoError(t, err)
 
+		// 创建测试用户
+		userID := createTestUser(t, storage)
+
 		// 并发保存10个请求（不要太多导致超时）
 		done := make(chan bool)
 		for i := 0; i < 10; i++ {
 			go func(idx int) {
 				id := fmt.Sprintf("concurrent-test-%d", idx)
 				req := createTestRequest(id)
-				err := storage.SaveRequest(req)
+				req.UserID = userID
+				err := storage.SaveRequest(userID, req)
 				if err != nil {
 					t.Errorf("保存请求 %s 失败: %v", id, err)
 				}

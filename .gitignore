@@ -54,6 +54,9 @@ mitm-openai-server.exe
 /data/
 /data/*.json
 
+# 测试运行时生成的数据目录（NewSQLiteStorage("")的默认路径）
+/pkg/storage/data/
+
 # 调试文件
 __debug_bin*
 

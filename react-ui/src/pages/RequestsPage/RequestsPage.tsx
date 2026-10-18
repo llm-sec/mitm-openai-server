@@ -6,7 +6,6 @@ import {
   Input,
   Space,
   Tag,
-  Select,
   message,
   Tooltip,
   Switch,
@@ -51,7 +50,7 @@ const getStoredRefreshInterval = (): number => {
 const RequestsPage: React.FC = () => {
   const navigate = useNavigate();
   const searchInput = useRef<any>(null);
-  const [searchText, setSearchText] = useState<string>('');
+  const [, setSearchText] = useState<string>('');
   const [searchedColumn, setSearchedColumn] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [requestRecords, setRequestRecords] = useState<RequestRecord[]>([]);
@@ -281,13 +280,23 @@ const RequestsPage: React.FC = () => {
           }
           
           let content = '';
-          
+
           if (typeof body === 'string') {
             content = body;
           } else if (body.messages && Array.isArray(body.messages) && body.messages.length > 0) {
-            // 如果是 Chat API 请求
+            // 如果是 Chat API 请求（OpenAI 或 Anthropic/Claude Code）
             const lastMessage = body.messages[body.messages.length - 1];
-            content = lastMessage.content || '';
+            // content 可能是字符串（OpenAI）或内容块数组（Anthropic: [{type:"text",text:"..."}]）
+            if (typeof lastMessage.content === 'string') {
+              content = lastMessage.content;
+            } else if (Array.isArray(lastMessage.content)) {
+              content = lastMessage.content
+                .filter((block: any) => block && block.type === 'text' && block.text)
+                .map((block: any) => block.text)
+                .join('');
+            } else {
+              content = lastMessage.content || '';
+            }
           } else if (body.prompt) {
             // 如果是 Completions API 请求
             content = body.prompt;

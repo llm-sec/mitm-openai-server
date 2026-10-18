@@ -12,6 +12,9 @@ import (
 )
 
 // FileSystemStorage 实现Storage接口，使用文件系统作为存储后端
+//
+// Deprecated: 该实现是旧版无用户隔离的存储后端，已不符合当前多用户 Storage 接口，
+// 不再被服务器引用。请使用 SQLiteStorage 作为存储实现。
 type FileSystemStorage struct {
 	dataFolder string
 }

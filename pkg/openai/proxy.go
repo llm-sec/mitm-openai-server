@@ -147,8 +147,14 @@ func (s *proxyService) HandleRequest(method, path string, headers, queryParams m
 		}, nil
 	}
 
-	// 构建目标URL
-	targetURL := s.buildURL(path)
+	// 构建目标URL - OpenAI真实API要求 /v1 前缀（无论服务层收到的路径是否带前缀）
+	upstreamPath := path
+	if upstreamPath == "" || upstreamPath == "/" {
+		upstreamPath = "/v1"
+	} else if upstreamPath != "/v1" && !strings.HasPrefix(upstreamPath, "/v1/") {
+		upstreamPath = "/v1" + upstreamPath
+	}
+	targetURL := s.buildURL(upstreamPath)
 
 	// 添加查询参数
 	if len(queryParams) > 0 {
@@ -231,11 +237,13 @@ func (s *proxyService) HandleRequest(method, path string, headers, queryParams m
 
 // 检查API是否支持
 func (s *proxyService) isAPISupported(apiKey string) bool {
-	fmt.Printf("DEBUG: 检查API支持: %s\n", apiKey)
+	// 兼容带/不带 /v1 前缀的路径（如 "POST /v1/chat/completions" 与 "POST /chat/completions"）
+	if idx := strings.Index(apiKey, " /v1"); idx != -1 {
+		apiKey = apiKey[:idx+1] + apiKey[idx+4:]
+	}
 
 	// 精确匹配
 	if s.supportedAPI[apiKey] {
-		fmt.Printf("DEBUG: API支持(精确匹配): %s\n", apiKey)
 		return true
 	}
 
@@ -245,13 +253,11 @@ func (s *proxyService) isAPISupported(apiKey string) bool {
 		if len(parts) == 2 {
 			method, path := parts[0], parts[1]
 			if strings.HasPrefix(apiKey, method+" "+path+"/") {
-				fmt.Printf("DEBUG: API支持(前缀匹配): %s 匹配 %s\n", apiKey, key)
 				return true
 			}
 		}
 	}
 
-	fmt.Printf("DEBUG: API不支持: %s\n", apiKey)
 	return false
 }
 

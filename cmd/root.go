@@ -15,7 +15,7 @@ var (
 
 	// rootCmd 代表没有调用子命令时的基础命令
 	rootCmd = &cobra.Command{
-		Use:   "fake-openapi-server",
+		Use:   "mitm-openai-server",
 		Short: "一个用于记录API请求的假OpenAPI服务器",
 		Long: `这是一个简单的假OpenAPI服务器，用于接收和记录传入的请求数据。
 服务器符合OpenAPI标准，总是返回固定的成功响应，并将请求详细信息记录到本地文件数据库中。
@@ -39,7 +39,7 @@ func Execute() {
 
 func init() {
 	// 持久性标志，对所有子命令都有效
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "配置文件路径 (默认是 $HOME/.fake-openapi-server.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "配置文件路径 (默认是 $HOME/.mitm-openai-server.yaml)")
 	rootCmd.PersistentFlags().StringVar(&dataDir, "data", "./data", "请求数据存储目录")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "启用详细输出")
 }

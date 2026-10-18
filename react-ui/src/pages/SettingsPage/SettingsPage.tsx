@@ -17,7 +17,7 @@ import { ProxyConfig } from '../../types';
 import { apiService } from '../../services/api';
 import { useNotification } from '../../components/Notification/Notification';
 
-const { Title, Paragraph, Text, Link } = Typography;
+const { Title, Paragraph, Link } = Typography;
 const { Option } = Select;
 
 const SettingsPage: React.FC = () => {

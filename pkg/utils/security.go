@@ -15,6 +15,11 @@ func IsURLSafe(targetURL string, serverAddr string) error {
 		return fmt.Errorf("无效的URL格式: %v", err)
 	}
 
+	// 无scheme的相对路径（如 "not-a-valid-url"）会被解析成空Host，必须拒绝
+	if parsedURL.Host == "" {
+		return fmt.Errorf("无效的URL格式: 缺少主机名")
+	}
+
 	// 检查是否为本地回环地址
 	if isLoopbackAddress(parsedURL.Host) {
 		return fmt.Errorf("不允许使用本地回环地址")
@@ -38,31 +43,64 @@ func IsURLSafe(targetURL string, serverAddr string) error {
 	return nil
 }
 
+// stripPort 从主机地址中提取主机名部分，兼容IPv4、IPv6（含方括号）和域名
+// "127.0.0.1:8080" -> "127.0.0.1"；"[::1]:8080" -> "::1"；"::1" -> "::1"；"::1:8080" -> "::1"；"localhost" -> "localhost"
+func stripPort(host string) string {
+	// SplitHostPort 可以正确处理 "host:port" 和 "[::1]:8080" 两种形式
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		return h
+	}
+	// 不带方括号的IPv6+端口（如 "::1:8080"）SplitHostPort 会解析失败，
+	// 尝试按最后一个冒号拆分：前半部分是合法IP且后半部分是数字时，视为IPv6+端口
+	if idx := strings.LastIndex(host, ":"); idx != -1 {
+		hostPart := host[:idx]
+		portPart := strings.Trim(host[idx+1:], "[]")
+		if net.ParseIP(hostPart) != nil && isNumericPort(portPart) {
+			return hostPart
+		}
+	}
+	// 剩下的直接去掉方括号即可
+	return strings.Trim(host, "[]")
+}
+
+// isNumericPort 判断字符串是否为纯数字端口
+func isNumericPort(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
 // isLoopbackAddress 检查是否为回环地址
 func isLoopbackAddress(host string) bool {
-	hostWithoutPort := strings.Split(host, ":")[0]
-	
+	hostWithoutPort := stripPort(host)
+
 	// 检查IPv4回环地址
 	if hostWithoutPort == "127.0.0.1" || hostWithoutPort == "localhost" {
 		return true
 	}
-	
+
 	// 检查IPv6回环地址
 	if hostWithoutPort == "::1" {
 		return true
 	}
-	
+
 	// 解析IP地址并检查是否为回环地址
 	if ip := net.ParseIP(hostWithoutPort); ip != nil && ip.IsLoopback() {
 		return true
 	}
-	
+
 	return false
 }
 
 // isPrivateNetwork 检查是否为私有网络地址
 func isPrivateNetwork(host string) bool {
-	hostWithoutPort := strings.Split(host, ":")[0]
+	hostWithoutPort := stripPort(host)
 	
 	// 解析IP地址
 	ip := net.ParseIP(hostWithoutPort)
@@ -99,7 +137,7 @@ func isPrivateNetwork(host string) bool {
 
 // isCloudMetadataAddress 检查是否为云服务元数据地址
 func isCloudMetadataAddress(host string) bool {
-	hostWithoutPort := strings.ToLower(strings.Split(host, ":")[0])
+	hostWithoutPort := strings.ToLower(stripPort(host))
 	
 	// 常见的云服务元数据地址
 	cloudMetadataHosts := []string{
@@ -127,8 +165,8 @@ func isSameAddress(targetHost, serverAddr string) bool {
 	}
 	
 	// 解析目标主机和服务器地址
-	targetHostWithoutPort := strings.Split(targetHost, ":")[0]
-	serverHostWithoutPort := strings.Split(serverAddr, ":")[0]
+	targetHostWithoutPort := stripPort(targetHost)
+	serverHostWithoutPort := stripPort(serverAddr)
 	
 	// 直接比较主机名
 	if targetHostWithoutPort == serverHostWithoutPort {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Descriptions, Tag, Typography, Space } from 'antd';
+import { Descriptions, Tag, Space } from 'antd';
 import { ClockCircleOutlined } from '@ant-design/icons';
 
 interface RequestSummaryProps {
@@ -8,8 +8,15 @@ interface RequestSummaryProps {
   latency?: number | null;
   statusCode?: number;
   host: string;
+  protocol?: string;
   getStatusColor: (status: number) => string;
 }
+
+// 协议类型对应的标签颜色
+const PROTOCOL_TAG_COLOR: Record<string, string> = {
+  openai: 'geekblue',
+  anthropic: 'purple',
+};
 
 const RequestSummary: React.FC<RequestSummaryProps> = ({
   id,
@@ -17,6 +24,7 @@ const RequestSummary: React.FC<RequestSummaryProps> = ({
   latency,
   statusCode = 200,
   host,
+  protocol,
   getStatusColor
 }) => {
   return (
@@ -38,6 +46,11 @@ const RequestSummary: React.FC<RequestSummaryProps> = ({
         </Tag>
       </Descriptions.Item>
       <Descriptions.Item label="Host">{host}</Descriptions.Item>
+      <Descriptions.Item label="协议">
+        <Tag color={PROTOCOL_TAG_COLOR[protocol || 'openai']}>
+          {protocol === 'anthropic' ? 'Anthropic (Claude)' : 'OpenAI'}
+        </Tag>
+      </Descriptions.Item>
     </Descriptions>
   );
 };

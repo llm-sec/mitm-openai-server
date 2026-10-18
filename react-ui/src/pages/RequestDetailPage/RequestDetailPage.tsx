@@ -7,6 +7,7 @@ import {
   RequestSummary,
   RequestContent,
   ResponseContent,
+  TlsClientHelloContent,
   LoadingState,
   ErrorState
 } from './components';
@@ -97,6 +98,7 @@ const RequestDetailPage: React.FC = () => {
             latency={request.latency}
             statusCode={request.statusCode}
             host={request.host}
+            protocol={request.metadata && request.metadata.protocol}
             getStatusColor={getStatusColor}
           />
           
@@ -119,6 +121,13 @@ const RequestDetailPage: React.FC = () => {
                 responseBody={request.responseBody}
                 copyToClipboard={copyToClipboard}
                 jsonPrettyTheme={jsonPrettyTheme}
+              />
+            </TabPane>
+
+            <TabPane tab="TLS 握手" key="3">
+              <TlsClientHelloContent
+                tls={request.metadata && request.metadata.tls_client_hello}
+                copyToClipboard={copyToClipboard}
               />
             </TabPane>
           </Tabs>

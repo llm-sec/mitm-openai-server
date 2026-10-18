@@ -92,20 +92,20 @@ func CreateTestRequest(id string) *storage.Request {
 		Method:    "GET",
 		Path:      "/api/test",
 		Timestamp: time.Now(),
-		Headers: map[string][]string{
-			"User-Agent": {"Test Agent"},
-			"Accept":     {"application/json"},
+		Headers: map[string]string{
+			"User-Agent": "Test Agent",
+			"Accept":     "application/json",
 		},
-		Query: map[string][]string{
-			"param1": {"value1"},
-			"param2": {"value2"},
+		Query: map[string]string{
+			"param1": "value1",
+			"param2": "value2",
 		},
 		Body:     `{"test": "data"}`,
 		ClientIP: "127.0.0.1",
 		Response: &storage.ProxyResponse{
 			StatusCode: 200,
-			Headers: map[string][]string{
-				"Content-Type": {"application/json"},
+			Headers: map[string]string{
+				"Content-Type": "application/json",
 			},
 			Body:    `{"result": "success"}`,
 			Latency: 123,
@@ -126,7 +126,8 @@ func TestStorageImplementation(t *testing.T, storage storage.Storage) {
 	// 保存请求
 	t.Run("SaveRequest", func(t *testing.T) {
 		req := CreateTestRequest("test1")
-		err := storage.SaveRequest(req)
+		req.UserID = 1
+		err := storage.SaveRequest(1, req)
 		assert.NoError(t, err)
 	})
 
@@ -134,11 +135,12 @@ func TestStorageImplementation(t *testing.T, storage storage.Storage) {
 	t.Run("GetRequestByID", func(t *testing.T) {
 		// 先保存请求
 		req := CreateTestRequest("test2")
-		err := storage.SaveRequest(req)
+		req.UserID = 1
+		err := storage.SaveRequest(1, req)
 		require.NoError(t, err)
 
 		// 获取请求
-		retrievedReq, err := storage.GetRequestByID("test2")
+		retrievedReq, err := storage.GetRequestByID(1, "test2")
 		assert.NoError(t, err)
 		assert.NotNil(t, retrievedReq)
 		assert.Equal(t, "test2", retrievedReq.ID)
@@ -150,7 +152,7 @@ func TestStorageImplementation(t *testing.T, storage storage.Storage) {
 
 	// 获取不存在的请求
 	t.Run("GetNonExistentRequest", func(t *testing.T) {
-		_, err := storage.GetRequestByID("non-existent")
+		_, err := storage.GetRequestByID(1, "non-existent")
 		assert.Error(t, err)
 	})
 
@@ -164,7 +166,8 @@ func TestStorageImplementation(t *testing.T, storage storage.Storage) {
 		for i := 1; i <= 5; i++ {
 			id := fmt.Sprintf("batch-test-%d", i)
 			req := CreateTestRequest(id)
-			err := storage.SaveRequest(req)
+			req.UserID = 1
+			err := storage.SaveRequest(1, req)
 			require.NoError(t, err)
 		}
 
@@ -186,7 +189,8 @@ func TestStorageImplementation(t *testing.T, storage storage.Storage) {
 			req := CreateTestRequest(id)
 			// 设置时间为递增，确保排序一致
 			req.Timestamp = time.Now().Add(time.Duration(i) * time.Minute)
-			err := storage.SaveRequest(req)
+			req.UserID = 1
+			err := storage.SaveRequest(1, req)
 			require.NoError(t, err)
 		}
 
@@ -214,19 +218,20 @@ func TestStorageImplementation(t *testing.T, storage storage.Storage) {
 	t.Run("DeleteRequest", func(t *testing.T) {
 		// 先保存请求
 		req := CreateTestRequest("delete-test")
-		err := storage.SaveRequest(req)
+		req.UserID = 1
+		err := storage.SaveRequest(1, req)
 		require.NoError(t, err)
 
 		// 确认请求存在
-		_, err = storage.GetRequestByID("delete-test")
+		_, err = storage.GetRequestByID(1, "delete-test")
 		require.NoError(t, err)
 
 		// 删除请求
-		err = storage.DeleteRequest("delete-test")
+		err = storage.DeleteRequest(1, "delete-test")
 		assert.NoError(t, err)
 
 		// 确认请求已删除
-		_, err = storage.GetRequestByID("delete-test")
+		_, err = storage.GetRequestByID(1, "delete-test")
 		assert.Error(t, err)
 	})
 
@@ -236,7 +241,8 @@ func TestStorageImplementation(t *testing.T, storage storage.Storage) {
 		for i := 1; i <= 3; i++ {
 			id := fmt.Sprintf("delete-all-test-%d", i)
 			req := CreateTestRequest(id)
-			err := storage.SaveRequest(req)
+			req.UserID = 1
+			err := storage.SaveRequest(1, req)
 			require.NoError(t, err)
 		}
 
@@ -260,7 +266,8 @@ func TestStorageImplementation(t *testing.T, storage storage.Storage) {
 		for i := 1; i <= 3; i++ {
 			id := fmt.Sprintf("export-test-%d", i)
 			req := CreateTestRequest(id)
-			err := storage.SaveRequest(req)
+			req.UserID = 1
+			err := storage.SaveRequest(1, req)
 			require.NoError(t, err)
 		}
 
@@ -295,7 +302,8 @@ func TestStorageReopen(t *testing.T, createStorage func() (storage.Storage, erro
 
 	// 保存数据
 	req := CreateTestRequest("reopen-test")
-	err = storage.SaveRequest(req)
+	req.UserID = 1
+	err = storage.SaveRequest(1, req)
 	require.NoError(t, err)
 
 	// 关闭存储
@@ -308,7 +316,7 @@ func TestStorageReopen(t *testing.T, createStorage func() (storage.Storage, erro
 	defer storage.Close()
 
 	// 验证数据是否还存在
-	retrievedReq, err := storage.GetRequestByID("reopen-test")
+	retrievedReq, err := storage.GetRequestByID(1, "reopen-test")
 	assert.NoError(t, err)
 	assert.NotNil(t, retrievedReq)
 	assert.Equal(t, "reopen-test", retrievedReq.ID)

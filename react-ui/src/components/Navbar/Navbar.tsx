@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, Typography, Dropdown, Avatar, Button, Space } from 'antd';
+import { Typography, Dropdown, Avatar } from 'antd';
 import { 
   HomeOutlined, 
   SettingOutlined, 
@@ -38,14 +38,6 @@ const Navbar: React.FC = () => {
   if (!isAuthenticated) {
     return null;
   }
-
-  // 处理菜单点击
-  const handleMenuClick = (e: {key: string}) => {
-    setCurrent(e.key);
-    if (e.key === 'logout') {
-      logout();
-    }
-  };
 
   // 菜单项定义
   const menuItems = [

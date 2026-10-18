@@ -14,6 +14,10 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// AnonymousUsername 匿名用户用户名
+// 未认证的API请求（如独立模式下直接访问/v1接口）会归一到该用户，满足外键约束
+const AnonymousUsername = "anonymous"
+
 // SQLiteStorage 实现Storage接口，使用SQLite作为存储后端
 type SQLiteStorage struct {
 	db         *sql.DB
@@ -428,6 +432,15 @@ func (s *SQLiteStorage) ListUsers(limit, offset int) ([]*User, error) {
 
 // SaveRequest 保存请求到SQLite数据库（需要用户ID）
 func (s *SQLiteStorage) SaveRequest(userID int64, req *Request) error {
+	// 未认证/匿名的请求（userID<=0）归一到匿名用户，满足外键约束
+	if userID <= 0 {
+		anonymousID, err := s.ensureAnonymousUser()
+		if err != nil {
+			return fmt.Errorf("获取匿名用户失败: %w", err)
+		}
+		userID = anonymousID
+	}
+
 	// 设置请求的用户ID
 	req.UserID = userID
 
@@ -485,6 +498,40 @@ func (s *SQLiteStorage) SaveRequest(userID int64, req *Request) error {
 	}
 
 	return nil
+}
+
+// ensureAnonymousUser 确保存在匿名用户并返回其ID（懒创建，线程安全）
+func (s *SQLiteStorage) ensureAnonymousUser() (int64, error) {
+	// 先尝试查询已存在的匿名用户
+	var id int64
+	err := s.db.QueryRow(`SELECT id FROM users WHERE username = ?`, AnonymousUsername).Scan(&id)
+	if err == nil {
+		return id, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return 0, fmt.Errorf("查询匿名用户失败: %w", err)
+	}
+
+	// 不存在则创建；并发场景下可能同时创建，冲突时回退为查询
+	u := &User{
+		Username:         AnonymousUsername,
+		Password:         "", // 匿名用户无凭据
+		UserType:         "user",
+		IsActive:         true,
+		MaxRequests:      10000,
+		DataRetentionDays: 30,
+	}
+	if err := s.CreateUser(u); err != nil {
+		if strings.Contains(err.Error(), "用户名已存在") {
+			err2 := s.db.QueryRow(`SELECT id FROM users WHERE username = ?`, AnonymousUsername).Scan(&id)
+			if err2 != nil {
+				return 0, fmt.Errorf("创建匿名用户失败: %w", err)
+			}
+			return id, nil
+		}
+		return 0, fmt.Errorf("创建匿名用户失败: %w", err)
+	}
+	return u.ID, nil
 }
 
 // GetRequestByID 根据ID获取特定用户的请求

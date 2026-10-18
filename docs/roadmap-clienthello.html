@@ -1,0 +1,361 @@
+<title>MITM Server Roadmap</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Layout: single narrow column, max 900px, cards for priorities */
+  :root {
+    --bg: #fbfcfe;
+    --bg-soft: #f1f5fa;
+    --surface: #ffffff;
+    --fg: #1c2733;
+    --muted: #5b6b7c;
+    --line: #dbe3ec;
+    --accent: #2f6fed;
+    --accent-soft: #e6eefc;
+    --good: #1c8f5b;
+    --good-soft: #e5f5ec;
+    --warn: #b07409;
+    --warn-soft: #fdf3dd;
+    --bad: #cf3f3f;
+    --bad-soft: #fdeaea;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+    --sans: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10151c;
+      --bg-soft: #161d26;
+      --surface: #1a222d;
+      --fg: #e6edf5;
+      --muted: #9fb0c0;
+      --line: #2b3644;
+      --accent: #6b9dff;
+      --accent-soft: #1b2a45;
+      --good: #4cc48d;
+      --good-soft: #143526;
+      --warn: #e0b24f;
+      --warn-soft: #332a12;
+      --bad: #f07070;
+      --bad-soft: #3a1c1c;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10151c;
+    --bg-soft: #161d26;
+    --surface: #1a222d;
+    --fg: #e6edf5;
+    --muted: #9fb0c0;
+    --line: #2b3644;
+    --accent: #6b9dff;
+    --accent-soft: #1b2a45;
+    --good: #4cc48d;
+    --good-soft: #143526;
+    --warn: #e0b24f;
+    --warn-soft: #332a12;
+    --bad: #f07070;
+    --bad-soft: #3a1c1c;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.65;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding-block: 48px 72px;
+  }
+  h1, h2, h3 { text-wrap: balance; font-weight: 700; }
+  h1 {
+    font-size: clamp(28px, 4.4vw, 38px);
+    line-height: 1.2;
+    margin: 0 0 6px;
+    letter-spacing: -0.02em;
+  }
+  h2 {
+    font-size: clamp(20px, 3vw, 24px);
+    margin: 56px 0 12px;
+    padding-top: 8px;
+    letter-spacing: -0.01em;
+  }
+  h3 { font-size: 16px; margin: 0 0 6px; }
+  p { margin: 0 0 14px; }
+  .lead { color: var(--muted); font-size: 16px; max-width: 62ch; }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0;
+    font-size: 12.5px; color: var(--muted);
+  }
+  .meta span {
+    background: var(--bg-soft); border: 1px solid var(--line);
+    padding: 3px 10px; border-radius: 999px;
+  }
+  .divider { height: 1px; background: var(--line); margin: 34px 0 0; }
+  section { margin-top: 8px; }
+  .eyebrow {
+    display: inline-block; font-size: 12px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; padding: 18px 20px; margin: 14px 0;
+  }
+  .card.warn { border-left: 3px solid var(--warn); }
+  .card.ok { border-left: 3px solid var(--good); }
+  .card.bad { border-left: 3px solid var(--bad); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 14px 0; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+  .stat .num { font-size: 24px; font-weight: 800; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .stat .lbl { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  ul, ol { padding-left: 1.3em; margin: 8px 0 14px; }
+  li { margin: 5px 0; }
+  code {
+    font-family: var(--mono); font-size: 0.86em;
+    background: var(--bg-soft); border: 1px solid var(--line);
+    padding: 1px 5px; border-radius: 5px;
+  }
+  pre {
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.6;
+    background: var(--bg-soft); border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 16px; overflow-x: auto; margin: 12px 0;
+  }
+  .pill {
+    display: inline-block; font-size: 11.5px; font-weight: 700;
+    padding: 2px 9px; border-radius: 999px; vertical-align: 1px;
+  }
+  .pill.p0 { background: var(--bad-soft); color: var(--bad); }
+  .pill.p1 { background: var(--warn-soft); color: var(--warn); }
+  .pill.p2 { background: var(--accent-soft); color: var(--accent); }
+  .pill.p3 { background: var(--bg-soft); color: var(--muted); border: 1px solid var(--line); }
+  .pill.good { background: var(--good-soft); color: var(--good); }
+  .row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin: 12px 0; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 700; }
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+  .check { color: var(--good); font-weight: 700; }
+  .cross { color: var(--bad); font-weight: 700; }
+  .file { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .verdict {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--good-soft); border: 1px solid var(--good);
+    border-radius: 12px; padding: 14px 18px; margin: 14px 0; font-weight: 600;
+  }
+  .mermaid { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin: 14px 0; }
+  @media (max-width: 560px) {
+    .wrap { padding-block: 32px 56px; }
+    .card { padding: 14px 15px; }
+    td, th { padding: 7px 9px; }
+  }
+</style>
+
+<div class="wrap">
+
+  <div class="eyebrow">llm-sec / mitm-openai-server</div>
+  <h1>MITM Server Roadmap</h1>
+  <p class="lead">项目现状诊断、分优先级迭代路线，以及 TLS ClientHello 抓取与回显的专项可行性方案。</p>
+  <div class="meta">
+    <span>📌 调研日期 2026-10-18</span>
+    <span>Go + Gin + SQLite</span>
+    <span>React + Antd</span>
+    <span>模式: mock / proxy</span>
+    <span>多用户隔离</span>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 现状 -->
+  <section>
+    <h2>1 · 项目现状</h2>
+    <p>MITM OpenAI API 服务器，接收、转发并记录 OpenAI 兼容 API 的请求与响应。核心能力：<strong>独立模式</strong>（返回模拟响应，用于调试）与<strong>代理模式</strong>（转发到真实 API 并全量留痕），配合多用户数据隔离（SQLite）与一套 React 管理界面（登录/注册/对话列表/详情/设置/指南）。</p>
+    <div class="grid">
+      <div class="stat"><div class="num">2</div><div class="lbl">工作模式: mock · proxy</div></div>
+      <div class="stat"><div class="num">2</div><div class="lbl">存储: SQLite · 用户隔离</div></div>
+      <div class="stat"><div class="num">6</div><div class="lbl">OpenAI API 路由族 /v1、/chat、/completions…</div></div>
+      <div class="stat"><div class="num">0</div><div class="lbl">TLS / HTTPS 支持（当前为纯 HTTP）</div></div>
+    </div>
+  </section>
+
+  <!-- 现状问题 -->
+  <section>
+    <h2>2 · 必须先解决的问题</h2>
+
+    <div class="card bad">
+      <div class="row"><h3>① 测试基线损坏 — <code>go test ./...</code> 现行失败</h3><span class="pill p0">P0</span></div>
+      <ul>
+        <li><strong>pkg/testutils 构建失败</strong>：<code>SaveRequest</code> / <code>GetRequestByID</code> 仍按旧签名调用，未适配多用户隔离后的 <code>(userID, …)</code> 参数 —— 多用户改造时测试辅助代码未同步。</li>
+        <li><strong>pkg/api 构建失败</strong>：<code>ui_handlers.go:782</code> 使用了 <code>utils</code> 但未 import。</li>
+        <li><strong>pkg/utils 测试失败</strong>：IPv6 回环 <code>::1</code> 未被识别、无效 URL 校验漏判 —— SSRF 防护存在真实缺口。</li>
+        <li><strong>pkg/openai 测试失败</strong>：<code>isAPISupported</code> 的「带参数路径」前缀匹配断言错误。</li>
+      </ul>
+    </div>
+
+    <div class="card warn">
+      <div class="row"><h3>② 类型/请求双重记录 —— TODO 中「每次对话产生两条请求」的根因</h3><span class="pill p0">P0</span></div>
+      <p>前后端两层各自调用 <code>SaveRequest</code> 一次：</p>
+      <ul>
+        <li><span class="file">pkg/server/server.go</span> — <code>apiMiddleware</code> 在进入 Handler 前先记录一次（<code>path=/v1/chat/completions</code>）；</li>
+        <li><span class="file">pkg/openai/handlers.go</span> — <code>HandleRequest</code> 剥掉 <code>/v1</code> 前缀后又记录一次（<code>path=/chat/completions</code>）。</li>
+      </ul>
+      <p><strong>结果</strong>：一条真实请求在列表里出现两条（详见下方时序确认）→ 详情页「上一条/下一条」、导出、统计全部失真。修复方向：统一记录入口，Handler 层不再重复保存。</p>
+    </div>
+
+    <div class="card warn">
+      <div class="row"><h3>③ 日志与调试噪声</h3><span class="pill p1">P1</span></div>
+      <p>后端散布 <code>fmt.Printf("DEBUG: …")</code>（含 <code>isAPISupported</code> 每请求多条）；前端 api 拦截器与 DebugAuthStatus 大量 <code>console.log</code>。请求密钥、token 前缀被直接打到控制台。应收敛为结构化日志（<code>slog</code>）并移除前端调试组件。</p>
+    </div>
+
+    <div class="card">
+      <div class="row"><h3>④ 前端入口多套并存</h3><span class="pill p2">P2</span></div>
+      <p><code>App.tsx</code> / <code>FinalApp.tsx</code> / <code>SimpleApp.tsx</code> / <code>TempApp.tsx</code> 与 <code>main.tsx</code> / <code>main-simple.tsx</code> 职责重叠，属历史遗留，需收敛为单一入口。</p>
+    </div>
+  </section>
+
+  <!-- TLS 专项 -->
+  <section>
+    <h2>3 · TLS ClientHello 抓取与回显</h2>
+    <div class="verdict">✅ 结论先行：完全可行，且与项目「安全攻防 / 调试留痕」的定位高度契合，建议作为下一迭代的核心功能。</div>
+
+    <h3>3.1 为什么值得做</h3>
+    <p>ClientHello 是 TLS 握手中客户端发送的<strong>第一条明文消息</strong>（加密发生在之后），包含客户端指纹、SNI、密码套件、扩展列表等关键情报，天然适合 MITM 留痕场景：</p>
+    <ul>
+      <li><strong>客户端识别</strong>：基于 ClientHello 计算 <strong>JA3 / JA4</strong> 指纹，区分 OpenAI SDK、curl、python requests、浏览器、攻击工具，回答「是谁在调用本服务器」；</li>
+      <li><strong>外带检测</strong>：安全攻防中提示词/敏感数据可能被编码进 SNI（类似 DNSlog 外带），抓取 ClientHello 即抓到这条隐蔽通道；</li>
+      <li><strong>握手留痕</strong>：补全「连接级」视角 —— 当前只记录应用层 HTTP，链路层/会话层完全黑盒；</li>
+      <li><strong>回显展示</strong>：抓到的字段（版本、SNI、密码套件、ALPN、JA3/JA4、原始 hex）结构化落到请求详情页，一条对话一个 TLS 面板。</li>
+    </ul>
+
+    <h3>3.2 抓取原理</h3>
+    <p>TLS 握手首条消息格式固定，可在 TCP 层直接解析：</p>
+    <pre>TCP stream ──► TLS Record Header(5B: type=0x16 handshake, version, length)
+              ──► Handshake Header(4B: type=0x01 client_hello, length)
+              ──► ClientHello 明文体:
+                    legacy_version(2) | random(32) | session_id |
+                    cipher_suites(2B len) | compression_methods |
+                    extensions(2B len) ─► SNI / ALPN / supported_groups /
+                                          signature_algorithms / …</pre>
+    <p>标准库 <code>crypto/tls</code> 的 <code>GetConfigForClient</code> 只能拿到结构化后的 <code>ClientHelloInfo</code>（SNI、CipherSuites、SupportedProtos…），<strong>拿不到原始字节</strong>，无法精确计算 JA3/JA4。因此正确做法是在 TLS 层之前 <em>peek</em> 原始字节：</p>
+
+    <pre class="mermaid">
+sequenceDiagram
+    participant C as 客户端
+    participant L as ProbeListener(TCP层)
+    participant T as tls.Server
+    participant H as HTTP Handler
+    C->>L: Accept() 建立连接
+    L->>L: peek 前若干字节(不消费)
+    L->>L: 判定 0x16 且类型 client_hello → 解析 + 算 JA3/JA4
+    L-->>T: 回放 peek 的字节 + 剩余流, 正常进行 TLS 握手
+    T-->>H: 解密后 HTTP 请求到达
+    Note over L,H: 解析结果存入连接上下文(goroutine-local/context)<br/>首个 HTTP 请求落地时写入 Request.Metadata["tls_client_hello"]
+    </pre>
+
+    <h3>3.3 实现方案对比</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>方案</th><th>抓取能力</th><th>改动面</th><th>评价</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>A · ProbeListener + 自研解析</strong></td>
+          <td>原始字节、JA3/JA4、全部扩展字段</td>
+          <td>新增 <code>pkg/tlsprobe</code>；Server 监听层包一层</td>
+          <td><span class="check">★ 推荐</span> 全量可控，无第三方依赖，约 300~500 行</td>
+        </tr>
+        <tr>
+          <td>B · 仅 <code>GetConfigForClient</code></td>
+          <td>无原始字节，无法算精确 JA3/JA4</td>
+          <td>改动最小（tls.Config 回调）</td>
+          <td>回显信息残缺，不满足诉求</td>
+        </tr>
+        <tr>
+          <td>C · 引第三方库（utls / go-ja3）</td>
+          <td>完整 + 现成指纹</td>
+          <td>新增依赖</td>
+          <td>可行；自研解析 ClientHello 本身并不复杂，倾向 A</td>
+        </tr>
+      </tbody>
+    </table></div>
+
+    <h3>3.4 落地步骤（方案 A）</h3>
+    <ol>
+      <li><strong>新包 <code>pkg/tlsprobe</code></strong>：<code>ParseClientHello(raw []byte) (*ClientHello, error)</code> —— 解析版本/随机数/密码套件（含 IANA 名称映射）/扩展（SNI、ALPN、supported groups、signature algorithms）/计算 JA3 与 JA4；同时提供 <code>ProbeListener</code>（包装 <code>net.Listener</code>，<code>Accept</code> 时 peek + 解析 + 回放）。</li>
+      <li><strong>Server 支持 TLS 监听</strong>：<code>ServerConfig</code> 增加 <code>TLSCertFile / TLSKeyFile / AutoTLS</code>；<code>Run()</code> 改为 <code>tls.Listen</code>；开发落地<strong>自动生成自签证书</strong>（写盘缓存），生产可用用户提供证书。</li>
+      <li><strong>数据落库</strong>：握手解析结果序列化进 <code>Request.Metadata["tls_client_hello"]</code>，随请求记录一并保存/查询 —— 无需新增数据库字段；同时补一张可选的独立「握手事件」视图用于无 HTTP 请求的连接。</li>
+      <li><strong>UI 回显</strong>：详情页新增 <code>TLS 握手</code> 标签页，展示字段名/值对照表 + JA3/JA4 指纹徽章 + 原始 hex（<code>details/summary</code> 折叠），暗色主题下同步适配。</li>
+      <li><strong>配置与文档</strong>：新增 <code>--tls</code>、<code>--tls-cert</code>、<code>--tls-key</code>、<code>--auto-tls</code> 启动参数；更新 README 与指南页（补 HTTPS base_url 接入示例 <code>https://host:port/v1</code>）。</li>
+      <li><strong>测试</strong>：单元测试覆盖 ClientHello 解析（含真实 Chrome/curl/Go 握手样本）、JA3/JA4 已知指纹向量；集成测试验证「HTTPS 请求 → 详情页出现 TLS 面板」。</li>
+    </ol>
+
+    <h3>3.5 需要留意的点</h3>
+    <ul>
+      <li><strong>证书信任</strong>：自签证书下客户端需跳过校验（<code>verify=False</code>）或导入 CA —— 需在 UI/README 明确引导；</li>
+      <li><strong>TLS 与明文共存</strong>：建议同一端口做协议探测（peek 后判定 0x16→TLS、否则 →HTTP），不影响现有 HTTP 用法；</li>
+      <li><strong>minVersion 策略</strong>：解析器需兼容 TLS 1.2/1.3 及 <code>supported_versions</code> 扩展中的协商降级；</li>
+      <li><strong>敏感字段</strong>：random、session_id 等二进制需 hex 编码展示，避免破坏 JSON/前端渲染。</li>
+    </ul>
+  </section>
+
+  <!-- 路线图 -->
+  <section>
+    <h2>4 · 分优先级迭代路线</h2>
+
+    <div class="card bad">
+      <div class="row"><h3>P0 · 恢复基线（先还技术债）</h3><span class="pill p0">P0</span></div>
+      <ul>
+        <li>修复 4 个包的测试失败（testutils 签名、ui_handlers import、IPv6/URL 校验、isAPISupported 断言）→ <span class="check">CI 恢复绿</span>；</li>
+        <li>消除请求双重记录（统一保存入口）+ 顺带解决 <code>/chat/completions</code> 幽灵路径；</li>
+        <li>补齐 <code>requests</code> CLI 子命令与 README 一致性（README 提到 <code>requests list/get/delete</code>，当前 cmd 未实现）。</li>
+      </ul>
+    </div>
+
+    <div class="card warn">
+      <div class="row"><h3>P1 · 核心功能增强（本 Roadmap 主推）</h3><span class="pill p1">P1</span></div>
+      <ul>
+        <li><span class="check">★</span> TLS ClientHello 抓取与回显（第 3 节专项方案）；</li>
+        <li>对话详情页增强：导出当前对话 JSON、返回列表、上一条/下一条全局快捷键（←/→，按钮上标注）、请求/响应标签记住上次选择；</li>
+        <li>概念重构：界面文案「请求 → 对话」统一替换、导航栏更名 <strong>MITM OpenAI API Server</strong>。</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="row"><h3>P2 · 工程化与周边</h3><span class="pill p2">P2</span></div>
+      <ul>
+        <li>官网 <code>website/</code>(React+TS, hash 路由, GitHub Pages) + GitHub Actions（site 变更自动部署、每次 push 跑全部单测）；</li>
+        <li>日志收敛为 slog、前端调试代码移除、单一入口收敛；</li>
+        <li>流式响应（SSE）代理验证 —— proxy 目前 <code>io.ReadAll</code> 全量缓存，需确认 stream 语义；如支持则列入 P2。</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="row"><h3>P3 · 远期</h3><span class="pill p3">P3</span></div>
+      <ul>
+        <li>代理模式对更多 OpenAI 兼容服务（DeepSeek 等）的一键配置；</li>
+        <li>WebSocket/流式会话级留痕、TLS 连接级审计面板；</li>
+        <li>请求重放 / 批量导出归档。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 建议下一步 -->
+  <section>
+    <h2>5 · 建议的下一步</h2>
+    <div class="card ok">
+      <ol>
+        <li><strong>先落 P0</strong>：一口气修掉测试失败 + 双重记录 —— 半天工作量，为所有后续迭代提供干净基线；</li>
+        <li><strong>紧随 P1-TLS 专项</strong>：按 3.4 步骤交付 <code>pkg/tlsprobe</code> → Server TLS 监听 → Metadata 落库 → UI TLS 面板；</li>
+        <li><strong>并行 UI 增强</strong>：详情页导出/快捷键/标签记忆与 TLS 面板同期排期。</li>
+      </ol>
+    </div>
+    <p style="color: var(--muted); font-size: 13px;">本文档基于 2026-10-18 代码库快照（<span class="file">2edfde7</span>）产出，落地前建议先合并/确认当前工作区状态。</p>
+  </section>
+
+</div>

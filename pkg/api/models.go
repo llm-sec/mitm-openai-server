@@ -35,6 +35,20 @@ type ServerConfig struct {
 	TargetUsername string
 	TargetPassword string
 	TargetToken    string
+
+	// TLS/HTTPS
+	EnableTLS   bool   // 启用HTTPS
+	AutoTLS     bool   // 自动生成自签名证书
+	TLSCertFile string // TLS证书文件路径
+	TLSKeyFile  string // TLS私钥文件路径
+
+	// Anthropic（Claude Code）协议支持
+	// 未配置目标URL时使用内置模拟服务，配置后开启代理模式
+	AnthropicTargetURL      string // 目标Anthropic API地址（如 https://api.anthropic.com）
+	AnthropicTargetAuthType string // 目标认证类型 (none, api_key, bearer)
+	AnthropicAPIKey         string // 目标x-api-key
+	AnthropicAuthToken      string // 目标Authorization: Bearer token
+	AnthropicModelsFile     string // 模型列表文件路径（mock模式）
 }
 
 // OpenAIServiceInterface 使用 openai.Service 接口

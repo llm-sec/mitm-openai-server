@@ -3,6 +3,7 @@ export { default as RequestSummary } from './RequestSummary';
 export { default as JsonCardView } from './JsonCardView';
 export { default as RequestContent } from './RequestContent';
 export { default as ResponseContent } from './ResponseContent';
+export { default as TlsClientHelloContent } from './TlsClientHelloContent';
 export { default as LoadingState } from './LoadingState';
 export { default as ErrorState } from './ErrorState';
 export { default as ExportButton } from './ExportButton'; 

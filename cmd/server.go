@@ -40,6 +40,19 @@ var (
 	// 存储相关标志
 	useSQL     bool
 	sqlitePath string
+
+	// TLS/HTTPS相关标志
+	enableTLS   bool
+	autoTLS     bool
+	tlsCertFile string
+	tlsKeyFile  string
+
+	// Anthropic（Claude Code协议）相关标志
+	anthropicTargetURL      string
+	anthropicTargetAuthType string
+	anthropicAPIKey         string
+	anthropicAuthToken      string
+	anthropicModelsFile     string
 )
 
 // serverCmd 表示server子命令
@@ -63,7 +76,19 @@ var serverCmd = &cobra.Command{
   mitm-openai-server server --proxy-mode --target-url https://api.example.com
   
   # 带认证的代理模式
-  mitm-openai-server server --proxy-mode --target-url https://api.example.com --target-auth-type basic --target-username user --target-password pass`,
+  mitm-openai-server server --proxy-mode --target-url https://api.example.com --target-auth-type basic --target-username user --target-password pass
+
+  # HTTPS模式（自动生成自签名证书，捕获TLS ClientHello指纹）
+  mitm-openai-server server --auto-tls
+
+  # HTTPS模式（使用自定义证书）
+  mitm-openai-server server --tls --tls-cert /path/to/cert.pem --tls-key /path/to/key.pem
+
+  # Claude Code协议（Anthropic）支持：默认使用内置模拟服务，无需任何配置即可连接
+  # Claude Code 配置: ANTHROPIC_BASE_URL=http://localhost:8080 ANTHROPIC_AUTH_TOKEN=任意值
+
+  # 代理模式（转发Claude Code请求到真实Anthropic API）
+  mitm-openai-server server --anthropic-target-url https://api.anthropic.com --anthropic-api-key sk-ant-xxx`,
 	Run: func(cmd *cobra.Command, args []string) {
 		runServer()
 	},
@@ -99,6 +124,19 @@ func init() {
 	// 存储相关标志
 	serverCmd.Flags().BoolVar(&useSQL, "use-sql", false, "启用SQLite存储")
 	serverCmd.Flags().StringVar(&sqlitePath, "sqlite-path", "", "SQLite数据库路径")
+
+	// TLS/HTTPS相关标志
+	serverCmd.Flags().BoolVar(&enableTLS, "tls", false, "启用HTTPS（需提供证书，或用 --auto-tls 自动生成）")
+	serverCmd.Flags().BoolVar(&autoTLS, "auto-tls", false, "自动生成自签名证书并启用HTTPS")
+	serverCmd.Flags().StringVar(&tlsCertFile, "tls-cert", "", "TLS证书文件路径（PEM格式）")
+	serverCmd.Flags().StringVar(&tlsKeyFile, "tls-key", "", "TLS私钥文件路径（PEM格式）")
+
+	// Anthropic（Claude Code协议）相关标志
+	serverCmd.Flags().StringVar(&anthropicTargetURL, "anthropic-target-url", "", "目标Anthropic API地址（配置后启用Claude Code代理模式，默认使用内置模拟服务）")
+	serverCmd.Flags().StringVar(&anthropicTargetAuthType, "anthropic-target-auth-type", "none", "目标Anthropic API认证类型 (none, api_key, bearer)")
+	serverCmd.Flags().StringVar(&anthropicAPIKey, "anthropic-api-key", "", "目标Anthropic API密钥（x-api-key）")
+	serverCmd.Flags().StringVar(&anthropicAuthToken, "anthropic-auth-token", "", "目标Anthropic Bearer Token（Authorization: Bearer）")
+	serverCmd.Flags().StringVar(&anthropicModelsFile, "anthropic-models-file", "", "Anthropic模型列表文件路径（mock模式）")
 }
 
 func runServer() {
@@ -174,6 +212,19 @@ func runServer() {
 		TargetUsername: targetUsername,
 		TargetPassword: targetPassword,
 		TargetToken:    targetToken,
+
+		// TLS/HTTPS相关配置
+		EnableTLS:   enableTLS,
+		AutoTLS:     autoTLS,
+		TLSCertFile: tlsCertFile,
+		TLSKeyFile:  tlsKeyFile,
+
+		// Anthropic（Claude Code协议）相关配置
+		AnthropicTargetURL:      anthropicTargetURL,
+		AnthropicTargetAuthType: anthropicTargetAuthType,
+		AnthropicAPIKey:         anthropicAPIKey,
+		AnthropicAuthToken:      anthropicAuthToken,
+		AnthropicModelsFile:     anthropicModelsFile,
 	}
 
 	// 创建并启动服务器

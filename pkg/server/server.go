@@ -2,37 +2,45 @@ package server
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
+	"github.com/llm-sec/mitm-openai-server/pkg/anthropic"
 	"github.com/llm-sec/mitm-openai-server/pkg/api"
 	"github.com/llm-sec/mitm-openai-server/pkg/embed"
 	"github.com/llm-sec/mitm-openai-server/pkg/openai"
 	"github.com/llm-sec/mitm-openai-server/pkg/storage"
+	"github.com/llm-sec/mitm-openai-server/pkg/tlsprobe"
 	"github.com/llm-sec/mitm-openai-server/pkg/utils"
 )
 
 // Server 表示API服务器
 // 是服务器的核心结构，包含路由引擎、存储接口和配置
 type Server struct {
-	router              *gin.Engine           // Gin路由引擎
-	storage             storage.Storage       // 存储接口
-	config              api.ServerConfig      // 服务器配置
-	openaiService       openai.Service        // OpenAI服务接口
-	configManager       *ConfigManager        // 配置管理器
-	uiServer            api.UIServerInterface // UI服务器接口
-	openaiHandler       interface{}           // OpenAI API处理器，使用openai.Handler
-	storagePath         string                // 用户配置的数据存储路径
-	SuppressStartupInfo bool                  // 控制是否输出启动信息
+	router              *gin.Engine             // Gin路由引擎
+	storage             storage.Storage         // 存储接口
+	config              api.ServerConfig        // 服务器配置
+	openaiService       openai.Service          // OpenAI服务接口
+	anthropicService    anthropic.Service       // Anthropic服务接口
+	configManager       *ConfigManager          // 配置管理器
+	uiServer            api.UIServerInterface   // UI服务器接口
+	openaiHandler       interface{}             // OpenAI API处理器，使用openai.Handler
+	anthropicHandler    interface{}             // Anthropic API处理器，使用anthropic.Handler
+	storagePath         string                  // 用户配置的数据存储路径
+	SuppressStartupInfo bool                    // 控制是否输出启动信息
+	tlsProbe            *tlsprobe.ProbeListener // TLS ClientHello 探测监听器（启用HTTPS时非nil）
 }
 
 // NewServer 创建一个新的服务器实例
@@ -171,6 +179,14 @@ func NewServerWithConfig(config api.ServerConfig) *Server {
 	openaiHandler := openai.NewHandler(config.Storage, server.openaiService)
 	server.openaiHandler = openaiHandler
 
+	// 初始化Anthropic（Claude Code协议）服务
+	server.anthropicService = newAnthropicService(config)
+	if server.anthropicService != nil {
+		// 创建Anthropic处理器
+		anthropicHandler := anthropic.NewHandler(config.Storage, server.anthropicService)
+		server.anthropicHandler = anthropicHandler
+	}
+
 	// 确保UI服务器使用最新密码
 	if uiServer, ok := server.uiServer.(*api.UIServer); ok {
 		if server.config.UIPassword != "" && len(server.config.UIPassword) > 0 {
@@ -180,9 +196,33 @@ func NewServerWithConfig(config api.ServerConfig) *Server {
 
 	// 设置路由
 	server.setupRoutes()
-	server.setupOpenAIRoutes() // 设置OpenAI相关路由
+	server.setupOpenAIRoutes()        // 设置OpenAI相关路由
+	server.setupAnthropicRoutes()     // 设置Anthropic相关路由
+	server.setupModelsDispatchRoute() // 设置/v1/models统一分派路由
 
 	return server
+}
+
+// newAnthropicService 根据配置创建Anthropic服务
+// 配置了目标URL则使用代理模式，否则使用内置模拟服务（Claude Code开箱即用）
+func newAnthropicService(config api.ServerConfig) anthropic.Service {
+	anthropicConfig := anthropic.DefaultConfig()
+
+	if config.AnthropicTargetURL != "" {
+		// 代理模式
+		anthropicConfig.ProxyMode = true
+		anthropicConfig.TargetURL = config.AnthropicTargetURL
+		anthropicConfig.TargetAuthType = config.AnthropicTargetAuthType
+		anthropicConfig.TargetAPIKey = config.AnthropicAPIKey
+		anthropicConfig.TargetToken = config.AnthropicAuthToken
+		anthropicConfig.ModelsFile = config.AnthropicModelsFile
+	} else {
+		// 模拟模式（默认，Claude Code无需任何配置即可连接）
+		anthropicConfig.ProxyMode = false
+		anthropicConfig.ModelsFile = config.AnthropicModelsFile
+	}
+
+	return anthropic.NewService(anthropicConfig)
 }
 
 // Run 启动服务器
@@ -200,10 +240,14 @@ func (s *Server) Run(addr string) error {
 	if !s.SuppressStartupInfo {
 		fmt.Println("\n┌─────────────────────────────────────────────────┐")
 		fmt.Println("│            MITM OpenAI Server 已启动            │")
-		fmt.Println("└─────────────────────────────────────────────────┘\n")
+		fmt.Println("└─────────────────────────────────────────────────┘")
 
 		port := addr[1:] // 去掉":"
-		fmt.Printf("登录地址: http://localhost:%s/ui/login\n", port)
+		scheme := "http"
+		if s.config.EnableTLS || s.config.AutoTLS {
+			scheme = "https"
+		}
+		fmt.Printf("登录地址: %s://localhost:%s/ui/login\n", scheme, port)
 		fmt.Printf("用户名:   %s\n", s.config.UIUsername)
 
 		// 显示真实密码
@@ -213,10 +257,71 @@ func (s *Server) Run(addr string) error {
 			fmt.Printf("密码:     [未设置]\n")
 		}
 
-		fmt.Println("\n请使用上述凭据登录系统，监控和分析OpenAI API请求。\n")
+		fmt.Println("\n请使用上述凭据登录系统，监控和分析OpenAI API请求。")
 	}
 
-	return s.router.Run(addr)
+	// 获取底层TCP监听器
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("监听地址 %s 失败: %w", addr, err)
+	}
+
+	// 如果启用了HTTPS，包装监听器以探测TLS ClientHello并加载证书
+	if s.config.EnableTLS || s.config.AutoTLS {
+		// 准备TLS证书
+		certFile, keyFile := s.config.TLSCertFile, s.config.TLSKeyFile
+		if s.config.AutoTLS {
+			// 自动生成自签名证书
+			certDir := "."
+			if s.config.UIDir != "" {
+				certDir = s.config.UIDir
+			}
+			certFile, keyFile = filepath.Join(certDir, "cert.pem"), filepath.Join(certDir, "key.pem")
+			if _, statErr := os.Stat(certFile); os.IsNotExist(statErr) {
+				certFile, keyFile, err = tlsprobe.GenerateSelfSignedCert(certDir)
+				if err != nil {
+					listener.Close()
+					return fmt.Errorf("自动生成自签名证书失败: %w", err)
+				}
+				if !s.SuppressStartupInfo {
+					fmt.Printf("已生成自签名证书: %s\n", certFile)
+				}
+			}
+		}
+		if certFile == "" || keyFile == "" {
+			listener.Close()
+			return fmt.Errorf("启用HTTPS需要提供证书: 使用 --tls-cert/--tls-key 或 --auto-tls 自动生成")
+		}
+
+		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			listener.Close()
+			return fmt.Errorf("加载TLS证书失败: %w", err)
+		}
+
+		// 创建ProbeListener窥探ClientHello，再包一层TLS
+		probeListener := tlsprobe.NewProbeListener(listener, 5*time.Second)
+		s.tlsProbe = probeListener
+
+		tlsConfig := &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			MinVersion:   tls.VersionTLS10,
+		}
+		tlsListener := tls.NewListener(probeListener, tlsConfig)
+
+		// 启动HTTPS服务器
+		srv := &http.Server{
+			Handler: s.router,
+		}
+		return srv.Serve(tlsListener)
+	}
+
+	// 普通HTTP模式，复用已创建的监听器
+	// 注意：不能使用 s.router.Run(addr)，那会再次bind同一端口导致 "address already in use"
+	srv := &http.Server{
+		Handler: s.router,
+	}
+	return srv.Serve(listener)
 }
 
 // ensurePassword 确保系统有有效的密码
@@ -475,6 +580,93 @@ func (s *Server) setupOpenAIRoutes() {
 	}
 }
 
+// setupAnthropicRoutes 设置Anthropic（Claude Code协议）API代理路由
+func (s *Server) setupAnthropicRoutes() {
+	// 如果没有初始化anthropicHandler，跳过设置Anthropic路由
+	if s.anthropicHandler == nil {
+		fmt.Println("警告: anthropicHandler未初始化，跳过Anthropic路由设置")
+		return
+	}
+
+	// 使用Anthropic处理器设置路由
+	if handler, ok := s.anthropicHandler.(*anthropic.Handler); ok {
+		handler.SetupRoutes(s.router, s.apiMiddleware())
+	} else {
+		fmt.Println("警告: anthropicHandler类型错误，无法设置Anthropic路由")
+	}
+}
+
+// setupModelsDispatchRoute 注册/v1/models统一分派路由
+// OpenAI与Anthropic的模型列表格式不同，根据请求头特征判断协议：
+//   - 带 anthropic-version 请求头 -> Anthropic
+//   - x-api-key 或 Authorization: Bearer 以 sk-ant- 开头 -> Anthropic
+//   - 其他情况 -> OpenAI
+func (s *Server) setupModelsDispatchRoute() {
+	s.router.GET("/v1/models", s.apiMiddleware(), func(c *gin.Context) {
+		if s.isAnthropicRequest(c) {
+			if handler, ok := s.anthropicHandler.(*anthropic.Handler); ok {
+				handler.HandleRequest(c)
+				return
+			}
+			// 没有Anthropic处理器时回退到OpenAI
+		}
+		if handler, ok := s.openaiHandler.(*openai.Handler); ok {
+			handler.HandleRequest(c)
+			return
+		}
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+	})
+}
+
+// isAnthropicRequest 判断请求是否属于Anthropic协议
+// 依据请求头特征判断，避免与OpenAI的/v1/models格式冲突
+func (s *Server) isAnthropicRequest(c *gin.Context) bool {
+	// 1. 带 anthropic-version 请求头，明确是Anthropic协议
+	if c.GetHeader("anthropic-version") != "" {
+		return true
+	}
+
+	// 2. x-api-key 以 sk-ant- 开头（Anthropic密钥特征）
+	if key := c.GetHeader("X-Api-Key"); strings.HasPrefix(key, "sk-ant-") {
+		return true
+	}
+
+	// 3. Authorization: Bearer 以 sk-ant- 开头
+	if auth := c.GetHeader("Authorization"); strings.HasPrefix(auth, "Bearer sk-ant-") {
+		return true
+	}
+
+	return false
+}
+
+// detectProtocol 根据请求路径和请求头判断协议类型
+// 用于在请求记录中标记 openai / anthropic，便于UI区分展示
+func (s *Server) detectProtocol(method, path string, headers map[string][]string) string {
+	// Anthropic协议的路径特征
+	if strings.HasPrefix(path, "/v1/messages") {
+		return "anthropic"
+	}
+
+	// /v1/models 根据请求头特征判断
+	if path == "/v1/models" {
+		for k, v := range headers {
+			lowerKey := strings.ToLower(k)
+			if lowerKey == "anthropic-version" && len(v) > 0 && v[0] != "" {
+				return "anthropic"
+			}
+			if lowerKey == "x-api-key" && len(v) > 0 && strings.HasPrefix(v[0], "sk-ant-") {
+				return "anthropic"
+			}
+			if lowerKey == "authorization" && len(v) > 0 && strings.HasPrefix(v[0], "Bearer sk-ant-") {
+				return "anthropic"
+			}
+		}
+	}
+
+	// 默认按OpenAI处理
+	return "openai"
+}
+
 // apiMiddleware API中间件
 // 记录所有API请求，包括请求和响应数据
 // 返回:
@@ -607,7 +799,15 @@ func (s *Server) apiMiddleware() gin.HandlerFunc {
 				"latency_ms": latency,
 				"user_id":    userID,
 				"username":   username,
+				"protocol":   s.detectProtocol(method, path, headers),
 			},
+		}
+
+		// 如果启用了HTTPS，附加TLS ClientHello信息（SNI、JA3/JA4指纹等）
+		if s.tlsProbe != nil {
+			if hello := s.tlsProbe.GetClientHello(c.Request.RemoteAddr); hello != nil {
+				request.Metadata["tls_client_hello"] = tlsprobe.ClientHelloToMap(hello)
+			}
 		}
 
 		// 保存请求到存储

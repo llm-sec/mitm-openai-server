@@ -137,6 +137,14 @@ func (s *mockService) matchPath(method, path string) (mockHandler, map[string]st
 		path = path[:len(path)-1]
 	}
 
+	// 兼容带 /v1 前缀的路径（测试和部分调用方可能直接传入 /v1/... 路径）
+	if path == "/v1" || strings.HasPrefix(path, "/v1/") {
+		path = strings.TrimPrefix(path, "/v1")
+		if path == "" {
+			path = "/"
+		}
+	}
+
 	// 首先尝试精确匹配
 	key := strings.ToUpper(method) + " " + path
 	if handler, ok := s.handlerMapping[key]; ok {
@@ -187,7 +195,7 @@ func (s *mockService) matchPath(method, path string) (mockHandler, map[string]st
 
 // registerHandlers 注册路径处理函数
 func (s *mockService) registerHandlers() {
-	// OpenAI API 路径 - 不包含/v1前缀，因为在handlers.go中已经移除
+	// OpenAI API 路径 - 注册时不带/v1前缀，matchPath中已经做了/v1前缀兼容处理
 	s.handlerMapping["POST /chat/completions"] = s.handleChatCompletions
 	s.handlerMapping["POST /completions"] = s.handleCompletions
 	s.handlerMapping["POST /embeddings"] = s.handleEmbeddings

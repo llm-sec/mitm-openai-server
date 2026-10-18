@@ -43,6 +43,7 @@ func SaveRequest(userID int64, req *Request, store storage.Storage) error {
 		Headers:   req.Headers,
 		Query:     req.Query,
 		Body:      req.Body,
+		Metadata:  req.Metadata,
 	}
 
 	// 如果有响应，也转换响应
@@ -89,6 +90,9 @@ func ConvertStorageToAPIRequest(req *storage.Request) *Request {
 
 	// 转换Query - 现在Query已经是map[string]string
 	apiReq.Query = req.Query
+
+	// 转换Metadata（如TLS ClientHello指纹等，供前端展示）
+	apiReq.Metadata = req.Metadata
 
 	// 转换Response（如果存在）
 	if req.Response != nil {
