@@ -1,2 +1,103 @@
-/* 主样式文件仅导入其他样式子模块 */
-/* 此文件已废弃，样式已移动到styles目录，保留此文件是为了向后兼容 */ 
+/* 请求详情页样式 */
+
+/* 主卡片容器 */
+.request-detail-card {
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+/* 请求ID等宽字体 */
+.detail-request-id {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 13px;
+  color: #595959;
+  word-break: break-all;
+}
+
+/* 概要描述列表（请求摘要） */
+.detail-summary.ant-descriptions-bordered .ant-descriptions-view {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.detail-summary.ant-descriptions-bordered .ant-descriptions-header {
+  margin-bottom: 8px;
+}
+
+.detail-summary .ant-descriptions-item-label {
+  background: #fafafa;
+  font-weight: 500;
+  color: #595959;
+}
+
+/* 协议标签优雅化 */
+.detail-summary .protocol-tag {
+  border-radius: 4px;
+  padding: 0 8px;
+}
+
+/* 概要下方分隔线 */
+.detail-divider {
+  margin: 20px 0 8px;
+}
+
+/* JSON 卡片标题前的彩色小竖条 */
+.json-card .ant-card-head {
+  border-bottom: 1px solid #f0f0f0;
+  position: relative;
+}
+
+.json-card .ant-card-head::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: #1890ff;
+}
+
+.json-card .ant-card-head-title {
+  padding-left: 12px;
+}
+
+/* JSON代码块区域细节 */
+.json-code-block {
+  background: #272822;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+}
+
+/* 响应体 AI 回复摘要卡 */
+.ai-reply-card {
+  border-radius: 10px;
+  border: 1px solid #e8f0fe;
+  background: linear-gradient(135deg, #f5f9ff 0%, #fafbfd 100%);
+}
+
+.ai-reply-card .ant-card-body {
+  padding: 16px 20px;
+}
+
+.ai-reply-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #1890ff;
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.ai-reply-content {
+  color: #2c3e50;
+  font-size: 14px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 240px;
+  overflow-y: auto;
+}

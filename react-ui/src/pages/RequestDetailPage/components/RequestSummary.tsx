@@ -28,8 +28,10 @@ const RequestSummary: React.FC<RequestSummaryProps> = ({
   getStatusColor
 }) => {
   return (
-    <Descriptions bordered column={{ xxl: 4, xl: 3, lg: 3, md: 2, sm: 1, xs: 1 }} style={{ marginTop: 24 }}>
-      <Descriptions.Item label="请求ID">{id}</Descriptions.Item>
+    <Descriptions bordered column={{ xxl: 4, xl: 3, lg: 3, md: 2, sm: 1, xs: 1 }} style={{ marginTop: 24 }} className="detail-summary">
+      <Descriptions.Item label="请求ID">
+        <span className="detail-request-id">{id}</span>
+      </Descriptions.Item>
       <Descriptions.Item label="时间">
         <Space>
           {new Date(timestamp).toLocaleString()}
@@ -47,7 +49,7 @@ const RequestSummary: React.FC<RequestSummaryProps> = ({
       </Descriptions.Item>
       <Descriptions.Item label="Host">{host}</Descriptions.Item>
       <Descriptions.Item label="协议">
-        <Tag color={PROTOCOL_TAG_COLOR[protocol || 'openai']}>
+        <Tag color={PROTOCOL_TAG_COLOR[protocol || 'openai']} className="protocol-tag">
           {protocol === 'anthropic' ? 'Anthropic (Claude)' : 'OpenAI'}
         </Tag>
       </Descriptions.Item>

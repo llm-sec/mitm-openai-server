@@ -2,27 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { utils } from '../../services/api';
-import { 
-  Button, 
-  Checkbox, 
-  Form, 
-  Input, 
-  Card, 
-  Typography, 
-  Alert, 
+import {
+  Button,
+  Checkbox,
+  Form,
+  Input,
+  Card,
+  Typography,
+  Alert,
   Layout,
   Row,
   Col,
   Space
 } from 'antd';
-import { 
-  UserOutlined, 
-  LockOutlined, 
-  EyeTwoTone, 
-  EyeInvisibleOutlined, 
+import {
+  UserOutlined,
+  LockOutlined,
+  EyeTwoTone,
+  EyeInvisibleOutlined,
   LoginOutlined,
   GithubOutlined,
-  SafetyOutlined
+  SafetyOutlined,
+  ApiOutlined,
+  FileSearchOutlined,
+  ClusterOutlined
 } from '@ant-design/icons';
 import Footer from '../../components/Footer';
 
@@ -33,19 +36,19 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
-  
+
   const { login } = useAuth();
   const navigate = useNavigate();
-  
+
   // 从本地存储加载之前保存的用户名和密码
   useEffect(() => {
     const savedUsername = localStorage.getItem('mitm_remembered_username');
     const savedPassword = localStorage.getItem('mitm_remembered_password');
     const savedRememberMe = localStorage.getItem('mitm_remember_me');
-    
+
     if (savedRememberMe === 'true') {
       setRememberMe(true);
-      
+
       if (savedUsername && savedPassword) {
         form.setFieldsValue({
           username: savedUsername,
@@ -60,10 +63,10 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = async (values: { username: string; password: string; remember: boolean }) => {
     const { username, password, remember } = values;
-    
+
     setLoading(true);
     setError('');
-    
+
     try {
       // 使用专门的登录API接口
       const response = await fetch('/ui/api/login', {
@@ -73,28 +76,15 @@ const LoginPage: React.FC = () => {
         },
         body: JSON.stringify({ username, password })
       });
-      
+
       const data = await response.json();
-      
-      // 添加控制台调试输出
-      console.log('登录响应数据:', data);
-      console.log('登录响应状态:', response.status);
-      console.log('data.data 完整内容:', data.data);
-      console.log('data.data 类型:', typeof data.data);
-      console.log('token是否存在:', !!data.data?.token);
-      if (data.data?.token) {
-        console.log('token长度:', data.data.token.length);
-        console.log('token前10个字符:', data.data.token.substring(0, 10));
-      } else {
-        console.log('token不存在，data.data?.token 值:', data.data?.token);
-      }
-      
+
       if (response.ok && data.code === 0) {
         // 登录成功
-        
+
         // 保存用户的"记住我"选择
         localStorage.setItem('mitm_remember_me', remember.toString());
-        
+
         // 如果用户选择了"记住我"，保存凭据
         if (remember) {
           localStorage.setItem('mitm_remembered_username', username);
@@ -104,13 +94,11 @@ const LoginPage: React.FC = () => {
           localStorage.removeItem('mitm_remembered_username');
           localStorage.removeItem('mitm_remembered_password');
         }
-        
+
         // 保存后端返回的token，设置为一年有效期
         if (data.data?.token) {
           utils.saveAuth(data.data.token, 365);
           login(username);
-          console.log('已保存token到localStorage');
-          console.log('保存的token:', localStorage.getItem('auth_token'));
           navigate('/');
         } else {
           setError('服务器没有返回有效的认证令牌');
@@ -125,60 +113,92 @@ const LoginPage: React.FC = () => {
       setLoading(false);
     }
   };
-  
+
+  // 品牌特性列表
+  const brandFeatures = [
+    { icon: <ApiOutlined />, text: '支持 OpenAI & Claude 协议' },
+    { icon: <FileSearchOutlined />, text: '实时记录与分析 AI 请求' },
+    { icon: <ClusterOutlined />, text: 'TLS 握手指纹与安全监控' },
+  ];
+
   return (
     <Layout style={{ minHeight: '100vh', backgroundColor: '#f0f2f5' }}>
       <Row justify="center" align="middle" style={{ minHeight: '100vh' }}>
         <Col xs={22} sm={20} md={16} lg={12} xl={10}>
-          <Card 
-            style={{ 
-              boxShadow: 'none', 
-              border: 'none', 
+          <Card
+            style={{
+              boxShadow: 'none',
+              border: 'none',
               background: 'transparent',
               backgroundColor: 'transparent',
               borderRadius: '0',
               padding: '0'
             }}
-            bodyStyle={{ 
-              padding: '0', 
+            bodyStyle={{
+              padding: '0',
               background: 'transparent',
               backgroundColor: 'transparent'
             }}
           >
-            <Row style={{ overflow: 'hidden', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' }}>
-              <Col xs={0} sm={0} md={10} style={{ 
-                backgroundColor: '#001529', 
-                color: 'white', 
-                padding: '48px 40px',
+            <Row style={{ overflow: 'hidden', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)' }}>
+              <Col xs={0} sm={0} md={10} style={{
+                background: 'linear-gradient(160deg, #001529 0%, #0a2540 100%)',
+                color: 'white',
+                padding: '48px 36px',
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'center'
+                justifyContent: 'space-between'
               }}>
-                <Typography>
-                  <Title level={2} style={{ color: 'white' }}>MITM OpenAI Server</Title>
-                  <Paragraph style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
-                    安全监控与分析OpenAI API请求的强大工具
-                  </Paragraph>
-                  <Paragraph style={{ color: 'rgba(255, 255, 255, 0.65)' }}>
-                    实时拦截、记录和检查AI交互的完整内容
-                  </Paragraph>
-                  <Space direction="vertical" style={{ marginTop: 24 }}>
-                    <Link 
-                      href="https://github.com/llm-sec/mitm-openai-server" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      style={{ color: 'white' }}
+                <div>
+                  <Space align="center" style={{ marginBottom: 32 }}>
+                    <span
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 44,
+                        height: 44,
+                        borderRadius: 10,
+                        background: 'linear-gradient(135deg, #1890ff 0%, #096dd9 100%)',
+                        fontSize: 22,
+                        color: '#fff',
+                        boxShadow: '0 2px 8px rgba(24, 144, 255, 0.4)'
+                      }}
                     >
-                      <GithubOutlined /> GitHub 项目仓库
-                    </Link>
-                    <Text style={{ color: 'rgba(255, 255, 255, 0.65)' }}>
-                      <SafetyOutlined /> 安全可靠的专业工具
-                    </Text>
+                      <SafetyOutlined />
+                    </span>
+                    <Title level={3} style={{ color: 'white', margin: 0 }}>MITM Server</Title>
                   </Space>
-                </Typography>
+                  <Title level={4} style={{ color: 'white', marginBottom: 8 }}>中间人 AI API 服务器</Title>
+                  <Paragraph style={{ color: 'rgba(255, 255, 255, 0.75)', marginBottom: 4 }}>
+                    安全监控与分析 API 请求的强大工具
+                  </Paragraph>
+                  <Paragraph style={{ color: 'rgba(255, 255, 255, 0.55)' }}>
+                    实时拦截、记录和检查 AI 交互的完整内容
+                  </Paragraph>
+                </div>
+                <Space direction="vertical" size={12}>
+                  {brandFeatures.map((f, i) => (
+                    <Text key={i} style={{ color: 'rgba(255, 255, 255, 0.75)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ color: '#1890ff', fontSize: 16 }}>{f.icon}</span>
+                      {f.text}
+                    </Text>
+                  ))}
+                  <Link
+                    href="https://github.com/llm-sec/mitm-openai-server"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'rgba(255, 255, 255, 0.85)', marginTop: 8 }}
+                  >
+                    <GithubOutlined /> GitHub 项目仓库
+                  </Link>
+                </Space>
               </Col>
               <Col xs={24} sm={24} md={14} style={{ padding: '48px 40px', backgroundColor: 'white' }}>
-                <Title level={3} style={{ textAlign: 'center' }}>系统登录</Title>
+                <Title level={3} style={{ textAlign: 'center', marginBottom: 4 }}>系统登录</Title>
+                <Paragraph type="secondary" style={{ textAlign: 'center', marginBottom: 24 }}>
+                  登录以查看和管理 AI API 请求记录
+                </Paragraph>
                 {error && (
                   <Alert
                     message={error}
@@ -199,9 +219,9 @@ const LoginPage: React.FC = () => {
                     name="username"
                     rules={[{ required: true, message: '请输入用户名' }]}
                   >
-                    <Input 
-                      prefix={<UserOutlined />} 
-                      placeholder="用户名" 
+                    <Input
+                      prefix={<UserOutlined />}
+                      placeholder="用户名"
                       autoComplete="username"
                       disabled={loading}
                     />
@@ -218,15 +238,12 @@ const LoginPage: React.FC = () => {
                       iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
                     />
                   </Form.Item>
-                  <Form.Item>
+                  <Form.Item style={{ marginBottom: 16 }}>
                     <Form.Item name="remember" valuePropName="checked" noStyle>
                       <Checkbox disabled={loading}>记住我</Checkbox>
                     </Form.Item>
-                    <RouterLink to="/forgot-password" style={{ float: 'right' }}>
-                      忘记密码
-                    </RouterLink>
                   </Form.Item>
-                  <Form.Item>
+                  <Form.Item style={{ marginBottom: 16 }}>
                     <Button
                       type="primary"
                       htmlType="submit"
@@ -251,4 +268,4 @@ const LoginPage: React.FC = () => {
   );
 };
 
-export default LoginPage; 
+export default LoginPage;

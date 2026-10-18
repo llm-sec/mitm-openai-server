@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Typography, Dropdown, Avatar } from 'antd';
-import { 
-  HomeOutlined, 
-  SettingOutlined, 
+import { Dropdown, Avatar } from 'antd';
+import {
+  HomeOutlined,
+  SettingOutlined,
   BookOutlined,
   LogoutOutlined,
   GithubOutlined,
-  UserOutlined
+  UserOutlined,
+  SafetyOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import './Navbar.css';
-
-const { Title } = Typography;
 
 const Navbar: React.FC = () => {
   const { isAuthenticated, logout } = useAuth();
@@ -50,7 +49,7 @@ const Navbar: React.FC = () => {
     {
       key: 'guide',
       icon: <BookOutlined />,
-      label: 'OpenAI API配置教程',
+      label: 'API配置教程',
       onClick: () => navigate('/guide')
     },
     {
@@ -73,9 +72,9 @@ const Navbar: React.FC = () => {
 
   // 渲染GitHub链接
   const renderGithubLink = () => (
-    <a 
-      href="https://github.com/llm-sec/mitm-openai-server" 
-      target="_blank" 
+    <a
+      href="https://github.com/llm-sec/mitm-openai-server"
+      target="_blank"
       rel="noopener noreferrer"
       className="github-link"
     >
@@ -86,18 +85,17 @@ const Navbar: React.FC = () => {
 
   // 渲染用户头像
   const renderUserAvatar = () => (
-    <Dropdown 
-      menu={{ items: userMenuItems }} 
+    <Dropdown
+      menu={{ items: userMenuItems }}
       placement="bottomRight"
       trigger={['click']}
     >
       <Avatar
         className="user-avatar"
         icon={<UserOutlined />}
-        style={{ 
+        style={{
           cursor: 'pointer',
           backgroundColor: '#1890ff',
-          marginRight: 0
         }}
       />
     </Dropdown>
@@ -109,7 +107,13 @@ const Navbar: React.FC = () => {
         {/* 左侧品牌和菜单 */}
         <div className="navbar-left">
           <Link to="/" className="navbar-brand">
-            <Title level={4}>中间人OpenAI API服务器</Title>
+            <span className="brand-logo">
+              <SafetyOutlined />
+            </span>
+            <span className="brand-text">
+              <span className="brand-name">中间人 AI API 服务器</span>
+              <span className="brand-sub">MITM Server</span>
+            </span>
           </Link>
           <ul className="navbar-menu">
             {menuItems.map(item => (
@@ -125,7 +129,7 @@ const Navbar: React.FC = () => {
             ))}
           </ul>
         </div>
-        
+
         {/* 右侧GitHub链接和用户头像 */}
         <div className="navbar-right">
           <div className="github-container">
@@ -140,4 +144,4 @@ const Navbar: React.FC = () => {
   );
 };
 
-export default Navbar; 
+export default Navbar;

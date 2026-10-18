@@ -1,6 +1,6 @@
-/* 页脚样式 - 朴素简洁设计 */
+/* 页脚样式 */
 .footer {
-  background: #f8f9fa;
+  background: #fafbfc;
   color: #7f8c8d;
   padding: 20px 0;
   margin-top: auto;
@@ -8,40 +8,32 @@
 }
 
 .footer-content {
-  max-width: 1280px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 0 24px;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   text-align: center;
+  flex-wrap: wrap;
 }
 
 .footer-link {
   color: #2c3e50;
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 14px;
   transition: color 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.footer-link::before {
-  content: '🔗';
-  font-size: 12px;
 }
 
 .footer-link:hover {
-  color: #3498db;
+  color: #1890ff;
 }
 
 .footer-divider {
-  color: #bdc3c7;
-  font-size: 14px;
-  margin: 0 4px;
+  color: #d0d7de;
+  font-size: 12px;
 }
 
 .footer-copyright {
@@ -58,42 +50,37 @@
   font-size: 14px;
 }
 
+.footer-protocols {
+  display: flex;
+  align-items: center;
+}
+
+.footer-tag {
+  margin: 0;
+  font-size: 11px;
+  line-height: 20px;
+  border-radius: 4px;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .footer {
     padding: 16px 0;
   }
-  
+
   .footer-content {
     padding: 0 16px;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
   }
-  
-  .footer-link {
-    font-size: 13px;
-  }
-  
+
+  .footer-link,
   .footer-copyright {
     font-size: 13px;
   }
-  
+
   .footer-divider {
     display: none;
-  }
-}
-
-@media (max-width: 480px) {
-  .footer-content {
-    padding: 0 12px;
-  }
-  
-  .footer-link {
-    font-size: 12px;
-  }
-  
-  .footer-copyright {
-    font-size: 12px;
   }
 }
 
@@ -103,11 +90,11 @@
     background: #000;
     border-top: 2px solid #fff;
   }
-  
+
   .footer-link {
     border: 1px solid rgba(255, 255, 255, 0.5);
   }
-  
+
   .footer-link:hover,
   .footer-link:focus {
     border-color: #fff;
@@ -119,4 +106,4 @@
 .footer-link:focus {
   outline: 2px solid rgba(59, 130, 246, 0.5);
   outline-offset: 2px;
-} 
+}

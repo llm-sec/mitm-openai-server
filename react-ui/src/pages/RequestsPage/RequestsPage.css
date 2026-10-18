@@ -1,0 +1,118 @@
+/* 请求列表页样式 - dashboard 风格 */
+
+/* 页头区域 */
+.requests-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.requests-page-title {
+  margin-bottom: 0 !important;
+}
+
+.requests-page-subtitle {
+  margin-bottom: 0 !important;
+}
+
+/* 统计卡片 */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 1200px) {
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .stats-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.stats-card {
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+}
+
+.stats-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.stats-card-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+}
+
+/* 统计卡片图标底座 */
+.stats-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.stats-icon-blue { background: rgba(24, 144, 255, 0.12); color: #1890ff; }
+.stats-icon-geekblue { background: rgba(47, 84, 235, 0.12); color: #2f54eb; }
+.stats-icon-purple { background: rgba(114, 46, 209, 0.12); color: #722ed1; }
+.stats-icon-red { background: rgba(255, 77, 79, 0.12); color: #ff4d4f; }
+
+.stats-value {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.stats-label {
+  font-size: 13px;
+  color: #8c8c8c;
+  margin: 0;
+}
+
+/* 详情操作按钮 - 轻量化 */
+.row-action-btn {
+  padding: 0 8px;
+  height: 24px;
+  font-size: 12px;
+}
+
+/* 请求方法圆点 */
+.method-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* 请求ID monospace */
+.request-id-cell {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 12px;
+  color: #595959;
+}
+
+/* 消息预览弱化展示 */
+.request-body-preview {
+  color: #8c8c8c;
+  font-size: 13px;
+}

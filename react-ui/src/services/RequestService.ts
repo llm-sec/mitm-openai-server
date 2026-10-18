@@ -16,6 +16,19 @@ export class RequestService {
   }
 
   /**
+   * 获取请求记录（含分页元信息，用于统计面板）
+   */
+  static async getRequestsWithTotal(): Promise<{ requests: RequestRecord[]; total: number }> {
+    try {
+      const result = await apiService.getRequestsWithTotal();
+      return { requests: result.requests as any, total: result.total };
+    } catch (error) {
+      console.error('获取请求记录(含统计)时出错:', error);
+      throw error;
+    }
+  }
+
+  /**
    * 获取单个请求记录详情
    */
   static async getRequestById(id: string): Promise<RequestRecord> {

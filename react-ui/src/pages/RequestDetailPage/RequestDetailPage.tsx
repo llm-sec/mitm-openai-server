@@ -12,13 +12,14 @@ import {
   ErrorState
 } from './components';
 import { useNavigationKeys, useRequestDetail } from './hooks';
-import { 
-  getMethodColor, 
-  getStatusColor, 
-  jsonPrettyTheme, 
+import {
+  getMethodColor,
+  getStatusColor,
+  jsonPrettyTheme,
   copyToClipboard,
-  confirmDeleteRequest 
+  confirmDeleteRequest
 } from './utils';
+import './RequestDetailPage.css';
 
 const { TabPane } = Tabs;
 
@@ -78,7 +79,7 @@ const RequestDetailPage: React.FC = () => {
   return (
     <Layout title="请求详情">
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        <Card>
+        <Card className="request-detail-card">
           <RequestHeader
             method={request.method}
             path={request.path}
@@ -86,6 +87,7 @@ const RequestDetailPage: React.FC = () => {
             nextRequestId={nextRequestId}
             navigateToPrevious={navigateToPrevious}
             navigateToNext={navigateToNext}
+            navigateToList={() => navigate('/requests')}
             handleDelete={handleDelete}
             getMethodColor={getMethodColor}
             requestData={request}
@@ -101,8 +103,8 @@ const RequestDetailPage: React.FC = () => {
             protocol={request.metadata && request.metadata.protocol}
             getStatusColor={getStatusColor}
           />
-          
-          <Divider />
+
+          <Divider className="detail-divider" />
 
           <Tabs activeKey={activeTab} onChange={setActiveTab}>
             <TabPane tab="请求" key="1">

@@ -51,16 +51,17 @@ const JsonCardView: React.FC<JsonCardViewProps> = ({
   }, [data]);
 
   return (
-    <Card 
-      size="small" 
+    <Card
+      size="small"
       title={title}
       style={style}
       extra={renderCardExtra()}
       styles={{ body: { padding: 0 } }}
+      className="json-card"
     >
       {hasData ? (
-        <div style={{ backgroundColor: '#272822', borderRadius: '0 0 6px 6px', overflow: 'hidden' }}>
-          <JSONPretty 
+        <div className="json-code-block">
+          <JSONPretty
             id={`json-pretty-${title.replace(/\s+/g, '-').toLowerCase()}`}
             data={processedData}
             theme={jsonPrettyTheme}

@@ -31,12 +31,10 @@ API.interceptors.request.use(config => {
     config.headers.Authorization = `Bearer ${token}`;
     // 同时尝试使用自定义头，某些代理可能会保留这个
     config.headers['X-Auth-Token'] = token;
-    console.log(`已添加认证头: Bearer ${token.substring(0, 10)}... (${token.length}字符)`);
   } else {
     console.warn('发送请求时未找到认证令牌! 这将导致401错误');
   }
   
-  console.log(`正在发送${config.method?.toUpperCase()}请求到: ${config.baseURL}${config.url}`, config.headers);
   return config;
 }, error => {
   console.error('请求拦截器错误:', error);
@@ -46,7 +44,6 @@ API.interceptors.request.use(config => {
 // 拦截器处理认证失败
 API.interceptors.response.use(
   response => {
-    console.log(`请求成功: ${response.config.url}, 状态码: ${response.status}`);
     return response;
   },
   error => {
@@ -75,8 +72,6 @@ API.interceptors.response.use(
 export const utils = {
   saveAuth: (token: string, expiryDays = 365) => {
     try {
-      console.log(`正在保存token: ${token.substring(0, 10)}...`);
-      
       // 直接保存token，不需要用户名和密码
       localStorage.removeItem('auth_token'); // 先清除
       localStorage.setItem('auth_token', token);
@@ -89,8 +84,6 @@ export const utils = {
         console.error('Token保存不一致!', 
           '预期:', token.substring(0, 10) + '...', 
           '实际:', savedToken.substring(0, 10) + '...');
-      } else {
-        console.log('Token成功保存到localStorage');
       }
       
       // 设置cookie有效期
@@ -103,14 +96,11 @@ export const utils = {
       
       // 同时设置会话存储作为备份
       sessionStorage.setItem('auth_token', token);
-      
-      console.log('认证信息已保存完成');
     } catch (error) {
       console.error('保存token时出错:', error);
       // 尝试使用备选存储方式
       try {
         sessionStorage.setItem('auth_token', token);
-        console.log('已使用sessionStorage作为备选存储');
       } catch (e) {
         console.error('所有存储方式都失败');
       }
@@ -118,25 +108,21 @@ export const utils = {
   },
   
   clearAuth: () => {
-    console.log('正在清除认证信息');
     localStorage.removeItem('auth_token');
     sessionStorage.removeItem('auth_token');
     document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Lax';
-    console.log('认证信息已清除');
   },
   
   isAuthenticated: () => {
     // 首先检查localStorage
     const localToken = localStorage.getItem('auth_token');
     if (localToken) {
-      console.log('从localStorage中发现token');
       return true;
     }
     
     // 然后检查sessionStorage
     const sessionToken = sessionStorage.getItem('auth_token');
     if (sessionToken) {
-      console.log('从sessionStorage中发现token，正在恢复到localStorage');
       localStorage.setItem('auth_token', sessionToken);
       return true;
     }
@@ -144,12 +130,10 @@ export const utils = {
     // 最后检查cookie
     const cookieMatch = document.cookie.match(/auth_token=([^;]+)/);
     if (cookieMatch && cookieMatch[1]) {
-      console.log('从cookie中发现token，正在恢复到localStorage');
       localStorage.setItem('auth_token', cookieMatch[1]);
       return true;
     }
     
-    console.log('未找到有效token');
     return false;
   },
   
@@ -179,35 +163,19 @@ export const apiService = {
   // 认证
   login: async (username: string, password: string) => {
     try {
-      console.log('尝试登录，用户名:', username);
-      
       // 使用增强的API实例而不是直接使用axios
       const response = await API.post('/login', {
         username,
         password
       });
       
-      console.log('登录API响应:', response.data);
-      
       // 检查登录是否成功
       if (response.data && response.data.status === 'success' && response.data.token) {
-        console.log('API登录成功，token:', response.data.token.substring(0, 10) + '...');
         // 保存返回的token
         utils.saveAuth(response.data.token);
-        console.log('Token已保存到localStorage:', localStorage.getItem('auth_token') ? '存在' : '不存在');
-        
-        // 添加实际的检查
-        const savedToken = localStorage.getItem('auth_token');
-        if (!savedToken || savedToken !== response.data.token) {
-          console.error('Token保存不一致!', 
-            '保存的:', savedToken ? savedToken.substring(0, 10) + '...' : '不存在', 
-            '服务器返回:', response.data.token.substring(0, 10) + '...');
-        }
-        
         return true;
       }
       
-      console.log('API登录失败，没有有效token');
       return false;
     } catch (error) {
       console.error('API登录出错:', error);
@@ -243,6 +211,30 @@ export const apiService = {
     } catch (error) {
       console.error('获取请求列表失败:', error);
       return [];
+    }
+  },
+
+  // 获取请求列表（含分页元信息 total/page/size，用于统计面板）
+  getRequestsWithTotal: async (): Promise<{ requests: Request[]; total: number; page: number; size: number }> => {
+    const fallback = { requests: [], total: 0, page: 1, size: 20 };
+    try {
+      const response = await API.get('/requests');
+      const data = response.data && response.data.data;
+      if (data && Array.isArray(data.requests)) {
+        return {
+          requests: data.requests,
+          total: typeof data.total === 'number' ? data.total : data.requests.length,
+          page: typeof data.page === 'number' ? data.page : 1,
+          size: typeof data.size === 'number' ? data.size : data.requests.length,
+        };
+      }
+      if (Array.isArray(data)) {
+        return { ...fallback, requests: data, total: data.length };
+      }
+      return fallback;
+    } catch (error) {
+      console.error('获取请求列表(含统计)失败:', error);
+      return fallback;
     }
   },
   

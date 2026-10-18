@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider, theme } from 'antd';
 import LoginPage from './pages/LoginPage';
@@ -11,31 +11,6 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NotificationProvider } from './components/Notification';
 import './styles/Global.css';
 
-// 调试认证状态的函数
-const DebugAuthStatus = () => {
-  useEffect(() => {
-    const authToken = localStorage.getItem('auth_token');
-    console.log('当前认证状态:', !!authToken);
-    if (authToken) {
-      console.log('Token长度:', authToken.length);
-      console.log('Token前10个字符:', authToken.substring(0, 10) + '...');
-      console.log('认证头示例:', `Bearer ${authToken.substring(0, 10)}...`);
-      
-      // 模拟API请求，打印出实际发送的认证头
-      const headers = new Headers();
-      if (authToken) {
-        headers.append('Authorization', `Bearer ${authToken}`);
-      }
-      console.log('模拟请求头:', {
-        'Content-Type': 'application/json',
-        'Authorization': headers.get('Authorization')
-      });
-    }
-  }, []);
-  
-  return null;
-};
-
 // 受保护的路由组件
 const ProtectedRoute: React.FC<{children: React.ReactNode}> = ({ children }) => {
   const { isAuthenticated } = useAuth();
@@ -44,19 +19,35 @@ const ProtectedRoute: React.FC<{children: React.ReactNode}> = ({ children }) => 
     return <Navigate to="/login" />;
   }
 
-  return (
-    <>
-      <DebugAuthStatus />
-      {children}
-    </>
-  );
+  return <>{children}</>;
 };
 
-// 定义主题配置
+// 全局主题配置：与 Global.css 中的设计变量保持一致的统一品牌风格
 const themeConfig = {
   token: {
     colorPrimary: '#1890ff',
-    borderRadius: 4,
+    colorInfo: '#1890ff',
+    colorSuccess: '#27ae60',
+    colorWarning: '#f39c12',
+    colorError: '#e74c3c',
+    colorBgLayout: '#f0f2f5',
+    borderRadius: 6,
+    fontSize: 14,
+    fontFamily:
+      "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif",
+  },
+  components: {
+    Layout: {
+      headerBg: '#001529',
+      bodyBg: '#f0f2f5',
+    },
+    Card: {
+      headerFontSize: 16,
+    },
+    Table: {
+      headerBg: '#fafafa',
+      headerColor: '#2c3e50',
+    },
   },
   algorithm: theme.defaultAlgorithm,
 };

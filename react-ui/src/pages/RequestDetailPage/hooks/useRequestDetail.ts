@@ -18,7 +18,6 @@ export const useRequestDetail = (id: string | undefined) => {
       try {
         // 获取当前请求详情
         const requestData: any = await apiService.getRequestById(id);
-        console.log('请求详情数据:', requestData); 
         
         // 处理数据字段映射
         if (requestData) {
@@ -65,17 +64,20 @@ export const useRequestDetail = (id: string | undefined) => {
             // 响应体可能在 response.body 或 responseBody
             responseBody: requestData.responseBody || 
                          (requestData.response ? requestData.response.body : null) || null,
-            // 状态码可能在多个不同字段中
-            statusCode: requestData.statusCode || 
-                       (requestData.response ? requestData.response.statusCode : null) || 
-                       requestData.responseCode || 
-                       requestData.status_code || 
+            // 状态码可能在多个不同字段中（兼容 status_code 与 statusCode 两种命名）
+            statusCode: requestData.statusCode ||
+                       (requestData.response ? requestData.response.statusCode : null) ||
+                       (requestData.response ? requestData.response.status_code : null) ||
+                       requestData.responseCode ||
+                       requestData.status_code ||
                        (requestData.responseHeaders && requestData.responseHeaders['status-code']) ||
                        (requestData.responseBody && requestData.responseBody.status) ||
                        200,
-            // 延迟可能在 latency 或 response.latency
-            latency: requestData.latency || 
+            // 延迟可能在 latency、latency_ms 或 response.latency 中
+            latency: requestData.latency ||
                     (requestData.response ? requestData.response.latency : null) ||
+                    (requestData.response ? requestData.response.latency_ms : null) ||
+                    (requestData.metadata ? requestData.metadata.latency_ms : null) ||
                     requestData.responseTime || null,
             // Host可能在不同的字段中
             host: requestData.host || 
